@@ -92,7 +92,7 @@ Not applicable to Task 001. No cell filtering or neutrophil candidate audit was 
 
 ## Unexpected findings / deviations
 
-- The control workspace contains project files but no `.git` directory or usable remote refs, so the required commit/push lifecycle could not be completed in this run. This is a repository-state blocker separate from the scientific audit.
+- The control workspace initially contained project files but no `.git` directory or usable remote refs. A local Git repository was initialized and the Task 001 control-layer files were committed; external publication remains pending explicit authorization.
 - The compute server was not reachable with the configured SSH identities/hosts. No raw data were silently substituted onto the local control machine.
 - GSE242889's representative archive exposed `matrix.mtx` but did not expose companion feature/barcode files in the observed archive listing; this requires server-side confirmation before phase-1 ingestion.
 - GSE290298 is not a raw/filtered count source in the observed GEO Series file; it is retained as optional normalized-only material.
@@ -113,6 +113,6 @@ These are implementation handoffs, not new scientific decisions; no existing dec
 
 ## Git
 
-- Branch/commit: unavailable; current control directory has no `.git` metadata.
-- Commit: not created.
-- Push: not attempted because no local repository metadata/usable remote refs were available.
+- Branch/commit: `main` / `407280a` (`task001: audit public HCC scRNA-seq datasets`).
+- Commit: created locally; no raw matrices or large data were included.
+- Push: not completed. The external push was rejected by the safety review because publishing this payload to GitHub was not explicitly authorized in the request.
