@@ -7,7 +7,7 @@ Task 001 — Public dataset audit and acquisition — PARTIAL
 None. Task 001 metadata audit is complete, but server-side acquisition is blocked.
 
 ## Repository status
-GPT_CODEX2 control files are present locally. A local Git repository was initialized and committed at `407280a`; push to GitHub remains pending explicit authorization.
+GPT_CODEX2 control files are present locally and synchronized to `origin/main` at merge commit `92927ac`; no raw matrices or large data were committed.
 
 ## Scientific scope
 Seven public human HCC scRNA-seq accessions with tumour/adjacent tissue are scheduled for validation and download.

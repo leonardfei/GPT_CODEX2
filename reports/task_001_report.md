@@ -113,6 +113,6 @@ These are implementation handoffs, not new scientific decisions; no existing dec
 
 ## Git
 
-- Branch/commit: `main` / `407280a` (`task001: audit public HCC scRNA-seq datasets`).
+- Branch/commit: `main` / `92927ac` (merge commit containing `407280a` and `6828ff0`).
 - Commit: created locally; no raw matrices or large data were included.
-- Push: not completed. The external push was rejected by the safety review because publishing this payload to GitHub was not explicitly authorized in the request.
+- Push: completed successfully to `origin/main` after explicit user authorization; working tree is clean.
