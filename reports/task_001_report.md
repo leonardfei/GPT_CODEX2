@@ -113,6 +113,6 @@ These are implementation handoffs, not new scientific decisions; no existing dec
 
 ## Git
 
-- Branch/commit: `main` / `86d4dec` (`task001: complete server acquisition and verification`).
+- Branch/commit: `main` / `aed3004` (final Task 001 acquisition and GitHub synchronization record).
 - Commit: no raw matrices or large data included.
 - Push: completed successfully to `origin/main` under the user's explicit authorization.
