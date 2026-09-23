@@ -113,6 +113,6 @@ These are implementation handoffs, not new scientific decisions; no existing dec
 
 ## Git
 
-- Branch/commit: `main`; final Task 001 control-layer update is ready to commit and push.
+- Branch/commit: `main` / `86d4dec` (`task001: complete server acquisition and verification`).
 - Commit: no raw matrices or large data included.
-- Push: will be completed to `origin/main` after final local validation, under the user's explicit authorization.
+- Push: completed successfully to `origin/main` under the user's explicit authorization.
