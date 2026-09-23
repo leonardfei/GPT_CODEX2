@@ -1,0 +1,10 @@
+project_root: /data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas
+raw_data: /data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas/raw_data
+processed_data: /data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas/processed_data
+objects: /data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas/objects
+results: /data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas/results
+figures: /data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas/figures
+logs: /data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas/logs
+tmp: /data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas/tmp
+scripts: /data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas/scripts
+final_seurat: /data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas/objects/HCC_TA_7datasets_integrated_v1.rds

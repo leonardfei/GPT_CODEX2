@@ -1,0 +1,8 @@
+dataset_accession	priority	planned_role	metadata_status	notes
+GSE282701	1	discovery	VERIFY_TASK001	Tumour/Adjacent human HCC scRNA-seq
+GSE242889	1	discovery	VERIFY_TASK001	Tumour/Adjacent; evaluate MVI metadata
+GSE326201	1	discovery_validation	VERIFY_TASK001	Tumour/non-tumour; evaluate etiology
+GSE149614	1	validation	VERIFY_TASK001	Classic HCC atlas; evaluate paired NTL samples
+GSE299340	2	validation	VERIFY_TASK001	Tumour/non-cancerous paired design reported
+GSE290298	2	validation	VERIFY_TASK001	Tumour/Adjacent paired design reported
+GSE202642	2	HBV_validation	VERIFY_TASK001	HBV-HCC; pairing must be verified

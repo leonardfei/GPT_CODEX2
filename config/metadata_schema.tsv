@@ -1,0 +1,18 @@
+field	required	description
+dataset	YES	GEO/public dataset accession
+sample_id	YES	Original sample/GSM/library identifier
+patient_id	YES	Patient identifier within dataset
+tissue	YES	Tumor or Adjacent
+paired_status	YES	paired/unpaired/unknown
+paired_id	YES	Patient-level pair identifier where applicable
+etiology	YES	HBV/HCV/NBNC/other/unknown
+MVI	NO	positive/negative/unknown
+platform	YES	Sequencing platform/protocol
+selection_strategy	YES	Unselected/CD45/FACS/remixed/other/unknown
+matrix_type	YES	raw_counts/filtered_counts/normalized/unknown
+source_url	YES	Authoritative accession/download source
+download_status	YES	PENDING/DOWNLOADED/DOWNLOAD_BLOCKED/NOT_REQUIRED
+n_cells_pre_qc	NO	Cell count before project QC
+n_cells_post_qc	NO	Cell count after project QC
+neutrophil_candidate_pre_qc	NO	Candidate neutrophil count before QC
+neutrophil_candidate_post_qc	NO	Candidate neutrophil count after QC
