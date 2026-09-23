@@ -7,7 +7,7 @@ Task 001 — Public dataset audit and acquisition — COMPLETED
 Task 001 — public dataset audit, server-side acquisition, and integrity verification.
 
 ## Repository status
-GPT_CODEX2 control files are present locally and synchronized to `origin/main` at commit `aed3004`; no raw matrices or large data were committed.
+GPT_CODEX2 control files are present locally and synchronized to `origin/main`; no raw matrices or large data were committed.
 
 ## Scientific scope
 Seven public human HCC scRNA-seq accessions with tumour/adjacent tissue are scheduled for validation and download.

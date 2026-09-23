@@ -113,6 +113,6 @@ These are implementation handoffs, not new scientific decisions; no existing dec
 
 ## Git
 
-- Branch/commit: `main` / `aed3004` (final Task 001 acquisition and GitHub synchronization record).
+- Branch/commit: `main`; final Task 001 control-layer updates were pushed successfully.
 - Commit: no raw matrices or large data included.
 - Push: completed successfully to `origin/main` under the user's explicit authorization.
