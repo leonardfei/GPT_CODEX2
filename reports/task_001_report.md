@@ -2,7 +2,7 @@
 
 ## Status
 
-PARTIAL — accession/sample audit and reproducible acquisition plan completed; all server-side matrix downloads are blocked because no configured compute host was reachable from this run.
+COMPLETED WITH EXPLICIT EXCLUSION — accession/sample audit, server-side acquisition, and integrity verification completed. Six count-based datasets were acquired; the optional normalized-only GSE290298 file was intentionally not downloaded.
 
 ## Inputs actually used
 
@@ -10,6 +10,7 @@ PARTIAL — accession/sample audit and reproducible acquisition plan completed; 
 - NCBI Entrez GEO `esearch`/`esummary` records for GSE282701, GSE242889, GSE326201, GSE149614, GSE299340, GSE290298 and GSE202642.
 - GEO family SOFT metadata and GEO supplementary directory/filelist records retrieved on 2026-09-23 UTC.
 - Representative matrix/file-header checks were performed without Task 002 preprocessing. No raw data were written to the repository.
+- Required public matrices were staged outside the repository, uploaded to the configured server data disk, and verified in place. The temporary staging area was removed after transfer.
 - NCBI SRA accession-term search and SRA summaries. The 18 returned runs all belong to GSE326201; no SRA hit was returned for the other six accession terms. GSE149614's GEO design notes EGA raw-data access under EGAS00001004468.
 
 Authoritative accession records: [GSE282701](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE282701), [GSE242889](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE242889), [GSE326201](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE326201), [GSE149614](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE149614), [GSE299340](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE299340), [GSE290298](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE290298), [GSE202642](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE202642).
@@ -57,14 +58,14 @@ No QC filtering, merging, annotation, normalization, or cell-level transformatio
 1. Parsed the seven GEO family SOFT files with `scripts/python/task001_build_manifests.py`.
 2. Normalized accession/sample titles into patient, tissue, pairing, etiology and MVI fields without inventing missing relationships.
 3. Added the required sample-level manifest, file-level download manifest and dataset inventory.
-4. Added a resumable/retryable server download script with per-file logging, SHA256 checksums and basic gzip/tar verification.
-5. Tested configured server connectivity read-only. The configured hosts failed as follows: `122.51.242.75` rejected the available public key, `i-2.gpushare.com` refused the configured port, and `192.168.110.10` timed out. The local machine does not have `/data/lf_data/` mounted.
+4. Added a resumable/retryable parallel-range download script with per-file logging, SHA256 checksums and basic gzip/tar verification.
+5. Uploaded the nine required phase-1 files to `/data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas/` and verified them in place. The server checksum manifest passed `sha256sum -c` for all 9/9 files; temporary upload parts and the transfer test file were removed.
 
 ## Parameters and software
 
 - Python 3.14.7; Bash 3.2.57; curl 7.88.1; bsdtar 3.5.3; gzip 403.100.6.
 - NCBI/GEO records checked at 2026-09-23 UTC.
-- Server download parameters: `curl --fail --location --retry 5 --retry-delay 10 --retry-all-errors --connect-timeout 30 --continue-at -`; SHA256 via `sha256sum`; gzip validation via `gzip -t`; tar validation via `tar -tf`.
+- Server download parameters: resumable HTTP Range requests with retry/backoff, 32 MiB chunks, and bounded parallelism; SHA256 via `sha256sum`; gzip validation via `gzip -t`; tar validation via `tar -tf`.
 - No stochastic operation; no seed required.
 
 ## QC
@@ -73,8 +74,8 @@ No QC filtering, merging, annotation, normalization, or cell-level transformatio
 - Sample inventory: 92 rows generated; all requested accession/sample IDs are represented.
 - Pairing: 6, 5, 8, 8, 5 and 4 confirmed paired patients for GSE282701, GSE242889, GSE326201, GSE149614, GSE299340 and GSE290298 respectively; GSE202642 remains unverified.
 - Matrix availability: six datasets have a public raw/filtered count representation identified; GSE290298 is normalized-only in the observed Series supplementary record.
-- Server acquisition: 0/7 datasets downloaded to the configured server; 7/7 have `DOWNLOAD_BLOCKED` records and an exact resumable URL/target/checksum/log plan.
-- Checksums: server-side checksum file was not created because no server connection was available.
+- Server acquisition: 6/7 dataset groups have their required phase-1 files downloaded and verified on the configured server; GSE290298 is explicitly `DOWNLOAD_BLOCKED` because its only observed matrix is optional normalized-only material.
+- Checksums: `/data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas/checksums/task001_download_checksums.sha256`; `sha256sum -c` passed for 9/9 required files.
 
 ## Neutrophil-specific QC
 
@@ -88,12 +89,12 @@ Not applicable to Task 001. No cell filtering or neutrophil candidate audit was 
 - [scripts/python/task001_build_manifests.py](../scripts/python/task001_build_manifests.py)
 - [scripts/shell/task001_download_public_matrices.sh](../scripts/shell/task001_download_public_matrices.sh)
 - [PROJECT_STATUS.md](../PROJECT_STATUS.md)
-- Server-only outputs not produced: `raw_data/<dataset>/`, `logs/task001_*`, `checksums/task001_download_checksums.sha256`.
+- Server-only outputs produced: `raw_data/<dataset>/` for six count-based datasets, `logs/task001_*`, and `checksums/task001_download_checksums.sha256`.
 
 ## Unexpected findings / deviations
 
 - The control workspace initially contained project files but no `.git` directory or usable remote refs. A local Git repository was initialized and the Task 001 control-layer files were committed; external publication remains pending explicit authorization.
-- The compute server was not reachable with the configured SSH identities/hosts. No raw data were silently substituted onto the local control machine.
+- Direct server-side NCBI transfers were heavily throttled, so the verified public files were staged outside the repository and uploaded over the authenticated SSH connection; no raw data were committed.
 - GSE242889's representative archive exposed `matrix.mtx` but did not expose companion feature/barcode files in the observed archive listing; this requires server-side confirmation before phase-1 ingestion.
 - GSE290298 is not a raw/filtered count source in the observed GEO Series file; it is retained as optional normalized-only material.
 
@@ -107,12 +108,11 @@ These are implementation handoffs, not new scientific decisions; no existing dec
 
 ## Questions for Web GPT
 
-1. Restore or provide a valid SSH identity/host for `/data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas/`, then rerun the download script.
-2. Confirm whether GSE290298 normalized-only material should be downloaded for exploratory cell-state work after the six count-based datasets.
-3. Confirm whether GSE242889 should remain phase-1 eligible if its server-side archive lacks feature/barcode companions.
+1. Confirm whether GSE290298 normalized-only material should be downloaded for exploratory cell-state work after the six count-based datasets.
+2. Confirm whether GSE242889 should remain phase-1 eligible if its archive lacks feature/barcode companions for some per-sample members.
 
 ## Git
 
-- Branch/commit: `main` / `92927ac` (merge commit containing `407280a` and `6828ff0`).
-- Commit: created locally; no raw matrices or large data were included.
-- Push: completed successfully to `origin/main` after explicit user authorization; working tree is clean.
+- Branch/commit: `main`; final Task 001 control-layer update is ready to commit and push.
+- Commit: no raw matrices or large data included.
+- Push: will be completed to `origin/main` after final local validation, under the user's explicit authorization.

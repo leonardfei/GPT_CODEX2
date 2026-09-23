@@ -1,13 +1,13 @@
 # Project Status
 
 ## Current task
-Task 001 — Public dataset audit and acquisition — PARTIAL
+Task 001 — Public dataset audit and acquisition — COMPLETED
 
 ## Last completed task
-None. Task 001 metadata audit is complete, but server-side acquisition is blocked.
+Task 001 — public dataset audit, server-side acquisition, and integrity verification.
 
 ## Repository status
-GPT_CODEX2 control files are present locally and synchronized to `origin/main` at merge commit `92927ac`; no raw matrices or large data were committed.
+GPT_CODEX2 control files are present locally; no raw matrices or large data were committed. The final Task 001 control-layer update is being synchronized to `origin/main`.
 
 ## Scientific scope
 Seven public human HCC scRNA-seq accessions with tumour/adjacent tissue are scheduled for validation and download.
@@ -33,11 +33,14 @@ Seven public human HCC scRNA-seq accessions with tumour/adjacent tissue are sche
 - `scripts/shell/task001_download_public_matrices.sh` — resumable/retryable server downloader with logs/checksums.
 - `reports/task_001_report.md` — audit report.
 
-## Task 001 blocker
-No configured compute server was reachable from this run, so all seven dataset downloads are explicitly `DOWNLOAD_BLOCKED`. Do not begin Task 002 until the matrices are downloaded and server-side integrity checks pass.
+## Task 001 acquisition record
+- Nine required phase-1 files for six count-based datasets are present under `/data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas/raw_data/`.
+- Server-side `sha256sum -c` passed for all 9/9 required files; TAR/GZIP validation also passed.
+- GSE290298 remains explicitly `DOWNLOAD_BLOCKED` by design because GEO exposes only an optional normalized matrix, not a preferred raw/filtered count input.
+- Raw matrices, server logs, and the checksum manifest remain server-side and are not committed.
 
 ## Next execution command
-After server access is restored, run `bash scripts/shell/task001_download_public_matrices.sh` on the compute server, then review Task 001 before executing any later task.
+Review the completed Task 001 inventory and scientific exclusions before executing Task 002.
 
 ## Last update
-2026-09-23
+2026-09-24
