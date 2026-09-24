@@ -1,18 +1,12 @@
-# Task 002 report — sample-level neutrophil-friendly QC
+# Task 002 report — corrected neutrophil-preserving per-sample QC
 
 **Status:** COMPLETED — HOLD FOR REVIEW
 
 **Run date:** 2026-09-24
 
-This report was regenerated after syncing local `origin/main` at commit `244a322`. The server-side Python QC, review PDF, and all 68 Seurat RDS objects were rerun; the rerun reproduced the committed QC table values exactly.
+## Scope and provenance
 
-## Scope and synchronization
-
-Before execution, the local repository was fast-forwarded from `origin/main` (`30db0f7` to `dade84f`). Task 002 was then run on the configured server under:
-
-`/data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas`
-
-The approved phase-1 cohort was processed exactly as specified:
+Before the corrected run, the local repository was synchronized with GitHub and the latest Task 002 correction decision was merged. The corrected run processed the approved phase-1 cohort only:
 
 - GSE282701
 - GSE242889
@@ -20,93 +14,104 @@ The approved phase-1 cohort was processed exactly as specified:
 - GSE149614
 - GSE299340
 
-GSE202642 and GSE290298 were not processed. No annotation or cross-dataset integration was performed.
+GSE202642 and GSE290298 remained excluded. No annotation or cross-dataset integration was performed.
 
-## Input structure validation
+The initial QC report is preserved at `reports/task_002_initial_report.md`. Initial objects remain under:
 
-All 68 planned samples passed the input structure audit.
+`/data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas/objects/task002_seurat/`
 
-- **GSE282701:** 12 per-sample gzipped 10x-style matrices.
-- **GSE242889:** 10 nested POSIX tar archives containing matrix, feature/gene, and barcode files. Feature IDs, feature names, and cell barcodes were recovered for all 10 samples.
-- **GSE326201:** 18 Cell Ranger filtered feature-barcode H5 files.
-- **GSE149614:** one combined gene-by-cell count table plus metadata. Only primary Tumor and Adjacent/NTL samples were retained; PVTT and LN samples were excluded. Metadata labels recorded as `Normal` were mapped to the approved Adjacent tissue role.
-- **GSE299340:** 10 gzipped 10x-style matrices.
+Corrected objects were written separately under:
 
-The detailed structure results are in `results/task002_input_structure_audit.csv`.
+`/data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas/objects/task002_corrected_seurat/`
 
-## QC implementation
+## Corrected QC rule
 
-Each sample was processed independently. The workflow:
+The initial run used neutrophil-candidate distributions to select thresholds, which made candidate-retention validation circular. The corrected run selected thresholds from all source cells before applying any marker-based identity rule:
 
-1. Loaded raw count matrices while preserving gene identifiers, gene names, and cell barcodes.
-2. Calculated `nCount_RNA`, `nFeature_RNA`, and mitochondrial percentage per cell.
-3. Applied sample-aware thresholds derived from the sample distributions and neutrophil-candidate distributions; no universal high minimum was imposed.
-4. Used a conservative candidate neutrophil screen for retention auditing, based on core markers `FCGR3B`, `CSF3R`, `CXCR2`, and `FPR1`, with supporting markers including `S100A8`, `S100A9`, `CTSG`, `ELANE`, `MPO`, `LYZ`, `MCEMP1`, `FCAR`, `FFAR2`, `NAMPT`, and `CXCR4`.
-5. Evaluated potential doublet risk using a high `nCount_RNA` plus high `nFeature_RNA` proxy. This was retained as a review flag only; it was not used for hard removal because mature neutrophils can be unusually low-complexity and aggressive doublet filtering could remove true biology.
-6. Wrote a per-sample retention audit and a review PDF with one QC page per sample.
+```text
+min_nFeature_RNA = max(100, min(300, floor(global nFeature_RNA 1st percentile)))
+min_nCount_RNA   = max(200, min(500, floor(global nCount_RNA 1st percentile)))
+max_percent_mt   = min(30, max(20, ceil(global percent.mt 98th percentile)))
+```
 
-The Python implementation is `scripts/python/task002_preprocess_qc.py`. Seurat object creation is in `scripts/R/task002_create_seurat_objects.R`.
+Neutrophil and broad granulocyte definitions were used only for retention auditing. High-count/high-feature doublet proxies were retained as review flags and were not hard-filtered.
 
-## Retention summary
+## Input and sample structure
 
-| Metric | Result |
-|---|---:|
-| Samples processed | 68 |
-| Cells before QC | 447,030 |
-| Cells after QC | 372,882 |
-| Candidate neutrophils before QC | 71,150 |
-| Candidate neutrophils after QC | 66,323 |
-| Candidate neutrophil retention, minimum | 89.6% |
-| Candidate neutrophil retention, median | 93.6% |
-| Samples flagged for suspiciously low retention | 0/68 |
-| Doublet-proxy review flags | 1,082 |
+All 68 planned samples passed the structure audit. GSE242889 feature IDs, feature names, and barcodes were recovered for all samples. GSE149614 retained only primary Tumor and Adjacent/NTL samples; PVTT and LN samples were excluded. The full corrected structure table is `results/task002_corrected_input_structure_audit.csv`.
 
-The lowest candidate retention was GSE326201 sample `GSM9625180`, with 60 of 67 candidates retained (89.6%). This did not meet the pre-specified suspicious-retention flag threshold of 80%.
+## Initial versus corrected totals
+
+| Metric | Initial QC | Corrected QC |
+|---|---:|---:|
+| Source cells | 447,030 | 447,030 |
+| Cells passing QC | 372,882 | 422,856 |
+| High-confidence granulocyte/neutrophil candidates retained | 61,337 | 64,838 |
+| Broad granulocyte-like candidates retained | 65,335 | 69,128 |
+| Cells rescued by corrected QC | — | 53,023 |
+| Cells retained only by initial QC | — | 3,049 |
+
+The corrected run retained more cells overall by design, while remaining subject to bounded mitochondrial thresholds and explicit review flags.
+
+## Corrected thresholds and retention
+
+Observed corrected threshold ranges across 68 samples:
+
+- `min_nFeature_RNA`: 100–300; median 256.5.
+- `min_nCount_RNA`: 500 for all samples because the global 1st-percentile values reached the upper bound.
+- `max_percent_mt`: 20–30%; median 30.
+
+Corrected high-confidence candidate retention was 92.6% at minimum and 99.5% at the median. Corrected broad-granulocyte-like retention was 90.7% at minimum and 99.5% at the median.
+
+The corrected audit generated 16 mandatory sample review flags:
+
+- 15 samples retained more than 20 percentage points more total cells than the initial QC.
+- 1 sample had more than half of its rescued broad-granulocyte-like cells without a core granulocyte marker.
+- No sample had corrected high-confidence retention below 90%.
+- No sample had rescued-cell median mitochondrial percentage above 25%.
+- No sample exceeded its source-cell count or had a cell-identity mismatch.
+
+These are review flags, not automatic rejection decisions. The sample-level details are in `results/task002_corrected_neutrophil_retention_audit.csv` and `results/task002_initial_vs_corrected_qc.csv`.
 
 By dataset:
 
-| Dataset | Samples | Cells before | Cells after | Candidates before | Candidates after |
-|---|---:|---:|---:|---:|---:|
-| GSE149614 | 18 | 63,101 | 48,919 | 9,246 | 8,647 |
-| GSE242889 | 10 | 60,340 | 48,239 | 17,901 | 16,418 |
-| GSE282701 | 12 | 141,842 | 125,833 | 14,585 | 13,669 |
-| GSE299340 | 10 | 81,801 | 72,756 | 17,145 | 16,083 |
-| GSE326201 | 18 | 99,946 | 77,135 | 12,273 | 11,506 |
+| Dataset | Samples | Source cells | Initial pass | Corrected pass | Rescued | Corrected high-confidence retained | Corrected broad retained |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| GSE149614 | 18 | 63,101 | 48,919 | 63,101 | 14,182 | 7,282 | 8,895 |
+| GSE242889 | 10 | 60,340 | 48,239 | 52,954 | 7,691 | 15,141 | 16,530 |
+| GSE282701 | 12 | 141,842 | 125,833 | 137,518 | 11,685 | 13,870 | 14,395 |
+| GSE299340 | 10 | 81,801 | 72,756 | 76,319 | 3,628 | 16,703 | 17,054 |
+| GSE326201 | 18 | 99,946 | 77,135 | 92,964 | 15,837 | 11,842 | 12,254 |
 
-## Threshold review items
+The rescued-cell distributions and marker-context fractions are in `results/task002_rescued_cells_summary.csv`.
 
-Observed sample-specific thresholds were:
+## Corrected Seurat objects and validation
 
-- `min_nFeature_RNA`: 290–2,064; median 689.
-- `min_nCount_RNA`: 557–7,825; median 1,576.5.
-- `max_percent_mt`: 20–60%; median 20%.
+The server contains 68 corrected per-sample Seurat RDS objects under:
 
-Twenty-nine samples received an adaptive mitochondrial ceiling above 20%, and one reached the 60% ceiling. These settings were intentionally conservative for mature neutrophil retention and should be reviewed before annotation/integration. The complete values and threshold basis are in `results/task002_qc_thresholds_by_sample.csv`.
+`/data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas/objects/task002_corrected_seurat/<dataset>/<sample_id>_qc.rds`
 
-## Seurat objects and validation
+Validation passed for all corrected objects:
 
-The server contains 68 per-sample Seurat RDS objects under:
-
-`/data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas/objects/task002_seurat/<dataset>/<sample_id>_qc.rds`
-
-Validation passed for all 68 objects:
-
+- 68/68 corrected RDS files exist.
 - 68/68 have a non-negative raw `counts` layer.
-- 68/68 have exact cell counts matching the Python retention audit.
-- Spot checks across GSE149614, GSE242889, and GSE326201 loaded successfully and exposed the expected `counts` layer.
-- Raw unnormalized counts for QC-passing cells are preserved in the RDS objects. Full pre-QC cell-level metrics and staged matrices remain on the server.
+- 68/68 corrected RDS cell counts exactly match the corrected QC audit.
+- Spot checks across GSE149614, GSE242889, and GSE326201 loaded successfully with the expected `counts` layer.
+- Raw unnormalized counts for corrected-QC cells and sample metadata are preserved.
 
-The validation table is `results/task002_rds_validation.csv`. Large matrices and RDS objects are intentionally not committed to GitHub.
+The validation table is `results/task002_corrected_rds_validation.csv`. Large matrices and RDS objects remain server-side and are not committed to GitHub.
 
 ## Review artifacts
 
-- `results/task002_neutrophil_retention_audit.csv`
-- `results/task002_qc_thresholds_by_sample.csv`
-- `results/task002_input_structure_audit.csv`
-- `results/task002_rds_validation.csv`
-- `results/task002_run_metadata.json`
-- `figures/task002_qc_review.pdf`
+- `results/task002_corrected_qc_thresholds_by_sample.csv`
+- `results/task002_corrected_neutrophil_retention_audit.csv`
+- `results/task002_initial_vs_corrected_qc.csv`
+- `results/task002_rescued_cells_summary.csv`
+- `results/task002_corrected_rds_validation.csv`
+- `results/task002_corrected_input_structure_audit.csv`
+- `results/task002_corrected_run_metadata.json`
+- `figures/task002_corrected_qc_review.pdf`
 
 ## Hold point
 
-Task 002 is complete and ready for Web GPT/user review. The next authorized step is to review the per-sample retention audit, adaptive thresholds, and QC PDF. Task 003 broad annotation and Task 004 integration must remain paused until that review explicitly approves proceeding.
+Corrected Task 002 is complete, but the 16 flagged samples and the initial-versus-corrected comparison require Web GPT/user review. Do not execute Task 003 annotation or Task 004 integration until the corrected QC is explicitly approved.

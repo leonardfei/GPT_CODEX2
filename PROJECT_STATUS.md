@@ -1,10 +1,10 @@
 # Project Status
 
 ## Current task
-Task 002 — corrected neutrophil-preserving QC — READY TO RUN
+Task 002 — corrected neutrophil-preserving QC — COMPLETED; HOLD FOR REVIEW
 
 ## Last completed task
-Task 002 initial QC — COMPLETED but superseded for downstream use pending correction.
+Task 002 corrected QC — COMPLETED; corrected-vs-initial comparison is ready for review.
 
 ## Repository status
 GPT_CODEX2 control files are synchronized to `origin/main`; no raw matrices or large data are committed.
@@ -48,14 +48,24 @@ Initial server RDS objects under `objects/task002_seurat/` must remain unchanged
 Corrected objects must be written under:
 `objects/task002_corrected_seurat/`
 
+## Corrected Task 002 execution record
+- Corrected QC ran after the latest GitHub Task 002 decision was synchronized and merged locally.
+- Processed 68 samples from GSE282701, GSE242889, GSE326201, GSE149614, and GSE299340; GSE202642 and GSE290298 remained excluded.
+- Thresholds were independent of neutrophil identity: all-source-cell 1st percentiles bounded to 100–300 features and 200–500 counts, and all-source-cell 98th percentile mitochondrial fraction bounded to 20–30%.
+- Source/initial/corrected cells: 447,030 / 372,882 / 422,856.
+- Corrected rescued cells: 53,023; initial-only cells: 3,049.
+- Corrected high-confidence candidate retention: 92.6% minimum, 99.5% median; corrected broad-granulocyte retention: 90.7% minimum, 99.5% median.
+- 16/68 samples carry mandatory review flags: 15 for >20 percentage-point total-cell retention gain and 1 for more than half of rescued broad-granulocyte-like cells lacking a core marker.
+- 68 corrected Seurat RDS objects were created under `objects/task002_corrected_seurat/`; raw counts and sample metadata were validated for 68/68 objects. Initial objects remain under `objects/task002_seurat/` for comparison.
+- Corrected artifacts: `results/task002_corrected_qc_thresholds_by_sample.csv`, `results/task002_corrected_neutrophil_retention_audit.csv`, `results/task002_initial_vs_corrected_qc.csv`, `results/task002_rescued_cells_summary.csv`, `results/task002_corrected_rds_validation.csv`, and `figures/task002_corrected_qc_review.pdf`.
+
 ## Pending tasks
-1. Execute corrected Task 002 and compare with initial QC
-2. Web GPT/user review corrected QC
-3. Task 003 — broad annotation and neutrophil confirmation
-4. Task 004 — five-dataset Seurat integration
+1. Web GPT/user review corrected QC and the 16 flagged samples
+2. Task 003 — broad annotation and neutrophil confirmation
+3. Task 004 — five-dataset Seurat integration
 
 ## Next execution command
-`Execute task_002.`
+Await Web GPT/user review of corrected Task 002 before executing Task 003.
 
 ## Last update
 2026-09-24

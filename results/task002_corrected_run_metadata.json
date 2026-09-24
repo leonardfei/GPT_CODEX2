@@ -1,0 +1,23 @@
+{
+  "task": "task_002_corrected",
+  "script": "task002_corrected_preprocess_qc.py",
+  "approved_datasets": [
+    "GSE149614",
+    "GSE242889",
+    "GSE282701",
+    "GSE299340",
+    "GSE326201"
+  ],
+  "excluded_datasets": [
+    "GSE202642",
+    "GSE290298"
+  ],
+  "n_samples": 68,
+  "threshold_rule": "all-source-cell 1st percentiles for nFeature/nCount bounded to 100-300 and 200-500; all-source-cell 98th percentile percent.mt bounded to 20-30",
+  "high_confidence_candidate_definition": "core_hits>=2 OR (core_hits>=1 AND support_hits>=2); audit only",
+  "broad_granulocyte_definition": "high_confidence OR (support_hits>=4 AND S100A8 and S100A9 expressed); sensitivity audit only",
+  "doublet_evaluation": "high nCount_RNA and nFeature_RNA 99.5th-percentile proxy retained as review flag; no hard removal",
+  "initial_comparison_source": "processed_data/task002/cell_qc/*",
+  "raw_counts_preserved": true,
+  "corrected_objects_root": "objects/task002_corrected_seurat"
+}
