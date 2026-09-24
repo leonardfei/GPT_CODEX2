@@ -1,10 +1,10 @@
 # Project Status
 
 ## Current task
-Task 003 metadata correction — READY TO RUN
+Task 003 metadata correction — COMPLETED
 
 ## Last completed task
-Task 003 extension-cohort preparation — COMPLETED, with metadata correction required before Task 004.
+Task 003 extension-cohort preparation and metadata correction — COMPLETED; corrected manifest/pairing audit is ready for review before Task 004.
 
 Task 002 corrected neutrophil-preserving QC for the original five cohorts remains accepted for downstream use.
 
@@ -58,13 +58,12 @@ Final target:
 `objects/HCC_TA_8datasets_integrated_v1.rds`
 
 ## Pending tasks
-1. Execute Task 003 metadata correction
-2. Web GPT/user review corrected manifest/pairing audit
-3. Task 004 — harmonized broad annotation and neutrophil confirmation
-4. Task 005 — final eight-cohort Seurat v5 integration
+1. Web GPT/user review corrected manifest/pairing audit
+2. Task 004 — harmonized broad annotation and neutrophil confirmation
+3. Task 005 — final eight-cohort Seurat v5 integration
 
 ## Next execution command
-`Execute task_003_metadata_correction.`
+`Execute task_004.` after review of the corrected manifest and pairing audit.
 
 ## Last update
-2026-09-24
+2026-09-25

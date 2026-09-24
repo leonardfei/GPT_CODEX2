@@ -6,6 +6,12 @@ Task 003 was run after synchronizing the local checkout from `origin/main`. The 
 
 Large raw inputs and prepared Seurat objects remain on the server under `/data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas/`; only the small audit artifacts are Git-tracked locally.
 
+## Metadata-only correction
+
+This correction did not rerun count-matrix QC, change thresholds, alter pass/fail cell lists, or change the retained cell sets. The nature_xue prepared object remains at 675,539 cells; the 34 matrix samples retain 392,457 corrected-QC cells in total, including 158,741 CRA002308 cells.
+nature_xue sample suffixes were remapped to base A-number patients: 92 sample rows now represent 79 patients, with 10 paired Tumor–Adjacent patients and 69 Tumor-only patients. Multiple Tumor/IM samples remain separate sample IDs; A119_HCC, A119_HCC_IM1, A119_HCC_IM2, and A119_HCC_N share `nature_xue_A119`.
+CRA002308 is corrected to `abundance_eligible=CONDITIONAL`: atlas/state analysis and paired within-cohort Tumor–Adjacent abundance sensitivity analysis are allowed, while pooled cross-cohort absolute whole-tissue fractions remain disallowed.
+
 ## Input inventory
 
 The recursive inventory contains 104 uploaded files across CRA002308, nature_xue, and in_house. Primary files used for processing have SHA-256 checksums; uploaded gzip files were tested with `gzip -t`.
@@ -14,13 +20,13 @@ The recursive inventory contains 104 uploaded files across CRA002308, nature_xue
 
 - 14 cell-called 10x Matrix Market samples were validated: N01–N07 and T01–T07, with 36,601 features and recoverable barcodes per sample.
 - N01–N07 were harmonized to Adjacent and T01–T07 to Tumor; the numeric suffix supplies the matched patient key.
-- The supplementary document states that live nucleated cells were flow-sorted after doublet exclusion from tumor and peri-tumor tissues. This is composition-altering selection, so `abundance_eligible=NO`; the cohort remains eligible for atlas/state analysis.
+- The supplementary document states that live nucleated cells were flow-sorted after doublet exclusion from tumor and peri-tumor tissues. Because this can alter cell composition but no lineage-specific immune enrichment is documented, `abundance_eligible=CONDITIONAL`: atlas/state analysis and paired within-cohort Tumor–Adjacent abundance sensitivity analyses are allowed, but it must not be treated as an unbiased pooled whole-tissue fraction dataset.
 - Corrected Task 002 identity-independent thresholds were derived from all source cells per sample and applied without using neutrophil marker status to choose thresholds.
 
 ## nature_xue
 
 The author object loaded as Seurat 5.3.0 with 20,002 features and 1,092,172 cells. RNA `counts` and `data` layers were present; the author metadata columns included `Sample`, `Cancer_type`, and `clusters`.
-The final subset contains 675,539 cells and excludes non-HCC entities, including ICC-linked adjacent samples. It retains HCC tumor cells and AL cells only when the source sample identifier explicitly identifies an HCC sample; AL is harmonized to Adjacent.
+The final subset contains 675,539 cells and excludes non-HCC entities, including ICC-linked adjacent samples. It retains HCC tumor cells and AL cells only when the source sample identifier explicitly identifies an HCC sample; AL is harmonized to Adjacent. Corrected Sample parsing yields 79 unique patients, including 10 patients with both Tumor and Adjacent samples.
 Author `clusters` and all original metadata are preserved in namespaced fields, including `source_author_annotation`. The original object was read-only and unchanged. Because uploaded metadata do not document whole-tissue versus enriched/sorted sampling, `abundance_eligible=CONDITIONAL`; no Task 002 QC thresholds were reapplied.
 
 ## in_house
@@ -45,6 +51,7 @@ Prepared server objects:
 - `results/task003_extension_cohort_summary.csv`
 - `results/task003_extension_qc_audit.csv`
 - `results/task003_nature_xue_subset_audit.csv`
+- `results/task003_nature_xue_pairing_audit.csv`
 - `results/task003_extension_object_validation.csv`
 
 Task 003 is complete at this boundary. Proceed to Task 004 only after reviewing these extension-cohort audits.

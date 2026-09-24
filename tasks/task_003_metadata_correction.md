@@ -1,7 +1,7 @@
 # Task 003 metadata correction — nature_xue pairing and CRA002308 abundance eligibility
 
 ## Status
-READY TO RUN
+COMPLETED
 
 ## Scope
 This is a metadata-only correction after Task 003 review.

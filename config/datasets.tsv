@@ -4,8 +4,8 @@ GSE242889	1	atlas_include_abundance_candidate	TASK002_CORRECTED_COMPLETE	Tumor/A
 GSE326201	1	atlas_include_abundance_candidate	TASK002_CORRECTED_COMPLETE	Tumor/non-tumor; etiology available
 GSE149614	1	atlas_include_abundance_candidate	TASK002_CORRECTED_COMPLETE	Primary Tumor/Adjacent only; PVTT/LN excluded
 GSE299340	1	atlas_include_abundance_candidate	TASK002_CORRECTED_COMPLETE	Paired tumor/non-cancerous design
-CRA002308	1	atlas_include_conditional_abundance	TASK003_METADATA_CORRECTION_PENDING	7 paired Tumor/Adjacent patients; live nucleated-cell flow sorting; paired within-cohort abundance sensitivity allowed
-nature_xue	1	atlas_include_author_processed	TASK003_METADATA_CORRECTION_PENDING	Author Seurat; HCC Tumor + HCC-linked AL; 92 sample records expected to map to 79 patients with 10 paired
+CRA002308	1	atlas_include_conditional_abundance	TASK003_METADATA_CORRECTION_COMPLETE	7 paired Tumor/Adjacent patients; live nucleated-cell flow sorting; paired within-cohort abundance sensitivity allowed
+nature_xue	1	atlas_include_author_processed	TASK003_METADATA_CORRECTION_COMPLETE	Author Seurat; HCC Tumor + HCC-linked AL; 92 sample records mapped to 79 patients with 10 paired
 in_house	1	atlas_include_conditional_abundance	TASK003_COMPLETE	10 paired YJCA/YJP patients; sampling provenance still required for unrestricted abundance use
 GSE290298	9	hold_excluded	TASK001_VERIFIED	Normalized-only matrix; excluded for now
 GSE202642	9	hold_excluded	TASK001_VERIFIED	FACS/composition bias and unresolved pairing; excluded for now
