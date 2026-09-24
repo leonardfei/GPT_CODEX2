@@ -1,44 +1,69 @@
-# Task 004 — Five-dataset Seurat integration
+# Task 004 — Harmonized broad annotation and neutrophil confirmation across the expanded atlas
 
 ## Status
 PENDING
 
-## Approved datasets
-Integrate only:
+## Preconditions
+Task 003 reviewed and approved.
+
+## Candidate cohorts
 - GSE282701
 - GSE242889
 - GSE326201
 - GSE149614
 - GSE299340
+- CRA002308
+- nature_xue
+- in_house
 
-Explicitly exclude:
-- GSE202642
-- GSE290298
+Only cohorts successfully prepared/approved in Task 003 may enter this task.
+
+## Inputs
+For the original five cohorts use corrected Task 002 objects only:
+`objects/task002_corrected_seurat/`
+
+For new cohorts use:
+`objects/task003_extension/`
 
 ## Goal
-Integrate approved cells from the five datasets into one traceable Seurat v5 object without erasing raw counts or biologically relevant Tumour–Adjacent variation.
+Create a harmonized broad cell-type layer and confirm neutrophil identities while preserving source annotations and QC provenance.
 
-## Default integration
-Seurat v5 RPCA, with parameters determined and documented during implementation/QC.
+## Broad classes
+At minimum:
+- hepatocyte/tumor epithelial
+- T/NK
+- B
+- plasma
+- monocyte/macrophage
+- neutrophil
+- dendritic
+- mast
+- endothelial
+- fibroblast/mesenchymal
+- other/uncertain
 
-## Required checks
-- retain original RNA counts and source sample layers/provenance;
-- verify metadata completeness and uniqueness;
-- inspect integration by dataset, patient, tissue and broad cell type;
-- assess overcorrection and undercorrection;
-- do not regress out tissue, etiology or neutrophil state merely to improve visual mixing;
-- preserve an unintegrated representation alongside the integrated reduction when practical.
+## Requirements
+1. Normalize/analyze each cohort in a way appropriate to its source representation before cross-cohort integration.
+2. Use coherent marker programs, not one-gene rules.
+3. Distinguish neutrophils from inflammatory monocytes and low-quality myeloid cells.
+4. Preserve `source_author_annotation`; never overwrite nature_xue author labels.
+5. Create `project_broad_celltype` and `neutrophil_confidence`.
+6. Preserve `qc_status`:
+   - original five/in_house/CRA count cohorts: distinguish standard pass vs rescued-by-corrected-QC where available;
+   - nature_xue: `author_processed`.
+7. For every cluster, report the fraction of rescued cells. Flag clusters dominated by rescued cells for marker/QC review.
+8. Do not delete a rescued-cell-dominated cluster solely because it was rescued; determine whether it has a coherent biological identity.
+9. Report neutrophil counts/fractions by dataset, patient and tissue.
+10. Separate `abundance_eligible` cohorts from atlas-only cohorts in all abundance summaries.
 
-## Final object
-`/data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas/objects/HCC_TA_5datasets_integrated_v1.rds`
+## Required outputs
+- `results/task004_celltype_counts.csv`
+- `results/task004_neutrophil_by_sample.csv`
+- `results/task004_cluster_rescued_cell_audit.csv`
+- `results/task004_author_vs_project_annotation_crosswalk.csv`
+- reviewable UMAP/dotplot/QC figures
+- server-side annotated cohort objects
+- `reports/task_004_report.md`
 
-## Required metadata
-dataset, sample_id, patient_id, tissue, paired_status/paired_id, etiology, MVI where available, platform, selection_strategy, QC metrics, broad cell type and neutrophil-confidence fields.
-
-## Outputs
-- final Seurat object on server;
-- integration QC figures/tables;
-- `reports/task_004_report.md`;
-- object checksum, size, cell count, feature count and Seurat/package versions recorded in the Git-tracked report.
-
-Stop after final object validation.
+## Hold point
+Freeze the approved cell set and harmonized broad annotations, then stop. Do not execute Task 005 integration until Web GPT/user review.

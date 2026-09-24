@@ -1,6 +1,6 @@
 field	required	description
-dataset	YES	GEO/public dataset accession
-sample_id	YES	Original sample/GSM/library identifier
+dataset	YES	Dataset/cohort identifier
+sample_id	YES	Original sample/library identifier
 patient_id	YES	Patient identifier within dataset
 tissue	YES	Tumor or Adjacent
 paired_status	YES	paired/unpaired/unknown
@@ -9,10 +9,16 @@ etiology	YES	HBV/HCV/NBNC/other/unknown
 MVI	NO	positive/negative/unknown
 platform	YES	Sequencing platform/protocol
 selection_strategy	YES	Unselected/CD45/FACS/remixed/other/unknown
-matrix_type	YES	raw_counts/filtered_counts/normalized/unknown
-source_url	YES	Authoritative accession/download source
-download_status	YES	PENDING/DOWNLOADED/DOWNLOAD_BLOCKED/NOT_REQUIRED
+matrix_type	YES	raw_counts/filtered_counts/normalized/Seurat_author_processed/unknown
+counts_available	YES	TRUE/FALSE/unknown
+qc_provenance	YES	project_corrected_qc/author_processed/source_filtered/other
+qc_status	YES	initial_and_corrected_pass/rescued_by_corrected_qc/author_processed/not_applicable/other
+abundance_eligible	YES	YES/NO/CONDITIONAL
+analysis_inclusion	YES	atlas_include/hold_excluded/other
+source_author_annotation	NO	Original author-provided cell type/cluster annotation when available
+project_broad_celltype	NO	Harmonized project broad cell-type annotation
+neutrophil_confidence	NO	high/medium/low/not_neutrophil/unknown
+source_url	NO	Authoritative source URL/accession
+download_status	YES	PENDING/DOWNLOADED/LOCAL_UPLOAD/NOT_REQUIRED
 n_cells_pre_qc	NO	Cell count before project QC
 n_cells_post_qc	NO	Cell count after project QC
-neutrophil_candidate_pre_qc	NO	Candidate neutrophil count before QC
-neutrophil_candidate_post_qc	NO	Candidate neutrophil count after QC
