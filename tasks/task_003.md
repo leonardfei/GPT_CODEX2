@@ -1,7 +1,7 @@
 # Task 003 — Prepare CRA002308, nature_xue and in_house for atlas inclusion
 
 ## Status
-PENDING
+COMPLETED
 
 ## Goal
 Audit and prepare the three newly uploaded cohorts so they can enter the same downstream annotation/integration framework as the five corrected-QC cohorts.
