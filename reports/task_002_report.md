@@ -4,6 +4,8 @@
 
 **Run date:** 2026-09-24
 
+This report was regenerated after syncing local `origin/main` at commit `244a322`. The server-side Python QC, review PDF, and all 68 Seurat RDS objects were rerun; the rerun reproduced the committed QC table values exactly.
+
 ## Scope and synchronization
 
 Before execution, the local repository was fast-forwarded from `origin/main` (`30db0f7` to `dade84f`). Task 002 was then run on the configured server under:

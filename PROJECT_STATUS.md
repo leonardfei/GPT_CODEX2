@@ -45,6 +45,7 @@ Their existing files/metadata must be retained unchanged but not processed furth
 - 68 per-sample Seurat RDS objects were created on the server with raw counts preserved for QC-passing cells. RDS validation passed for 68/68 objects.
 - Review artifacts: `results/task002_neutrophil_retention_audit.csv`, `results/task002_qc_thresholds_by_sample.csv`, `results/task002_input_structure_audit.csv`, `results/task002_rds_validation.csv`, and `figures/task002_qc_review.pdf`.
 - Annotation and integration are paused pending review of the retention audit, sample-specific thresholds, and QC plots.
+- Task 002 was rerun after synchronizing from GitHub commit `244a322`; the rerun reproduced the QC tables and all 68-object validation metrics exactly. The regenerated QC PDF is included in the repository.
 
 ## Pending tasks
 1. Review Task 002 retention audit, adaptive thresholds, and QC plots; hold point is active
