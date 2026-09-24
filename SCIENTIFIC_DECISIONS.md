@@ -33,6 +33,20 @@ For Tasks 002–004, include only the following five datasets:
 
 Do not include GSE202642 or GSE290298 in preprocessing, annotation, abundance analysis, or Seurat integration at this stage. Retain their downloaded/metadata files unchanged for possible later supplementary analyses.
 
+## D009 — QC threshold independence from neutrophil identity
+Neutrophil or granulocyte marker status must not determine the QC thresholds used to evaluate neutrophil retention.
+
+For the corrected Task 002 secondary QC:
+- sample-level minimum feature thresholds are bounded to 100–300 features;
+- sample-level minimum count thresholds are bounded to 200–500 UMIs/counts;
+- sample-level mitochondrial ceilings are bounded to 20–30%;
+- thresholds are derived from all cells in the sample, not from candidate-neutrophil subsets.
+
+Neutrophil marker rules are audit tools only until Task 003 annotation.
+
+The initial Task 002 QC run is preserved for comparison but is superseded for downstream analysis until the corrected run is approved.
+
 ## Decision log
 - 2026-09-23: D001–D007 initialized for project start.
 - 2026-09-24: D008 added by user decision; GSE202642 and GSE290298 excluded from phase-1 analysis/integration.
+- 2026-09-24: D009 added after Web GPT review of initial Task 002; QC threshold selection must be independent of neutrophil-candidate status.

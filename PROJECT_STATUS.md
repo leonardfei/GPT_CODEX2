@@ -1,60 +1,61 @@
 # Project Status
 
 ## Current task
-Task 002 — sample-level neutrophil-friendly QC — COMPLETED; HOLD FOR REVIEW
+Task 002 — corrected neutrophil-preserving QC — READY TO RUN
 
 ## Last completed task
-Task 002 — sample-level neutrophil-friendly QC on the five approved datasets — COMPLETED; review hold active.
+Task 002 initial QC — COMPLETED but superseded for downstream use pending correction.
 
 ## Repository status
 GPT_CODEX2 control files are synchronized to `origin/main`; no raw matrices or large data are committed.
 
 ## Phase-1 analysis cohort
-The user has approved a five-dataset phase-1 cohort:
+Five datasets remain approved:
 - GSE282701
 - GSE242889
 - GSE326201
 - GSE149614
 - GSE299340
 
-The following two datasets are explicitly excluded from Tasks 002–004 for now:
-- GSE202642 — FACS/composition bias and unresolved patient pairing
-- GSE290298 — normalized-only matrix in GEO
+Excluded for now:
+- GSE202642
+- GSE290298
 
-Their existing files/metadata must be retained unchanged but not processed further unless explicitly reactivated.
+## Task 002 review decision
+The initial QC run successfully processed 68 samples and produced valid Seurat objects, but its QC threshold selection is considered circular for neutrophil-retention validation because candidate-neutrophil distributions directly determined the lower feature/count thresholds and mitochondrial ceilings.
 
-## Important constraints
-- Server does not rely on GitHub/general internet connectivity.
-- Large data remain on the server and are not committed.
-- Mature neutrophil retention is a mandatory preprocessing QC endpoint.
-- Patient/sample, not cell, is the biological replicate for abundance analyses.
+Observed initial thresholds included:
+- min_nFeature_RNA up to 2,064;
+- min_nCount_RNA up to 7,825;
+- max_percent_mt up to 60%.
 
-## Task 001 acquisition record
-- Nine required files for six count-based datasets are present under `/data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas/raw_data/`.
-- Server-side `sha256sum -c` passed for all 9/9 required files; TAR/GZIP validation passed.
-- GSE290298 was intentionally not downloaded because GEO exposes only normalized expression.
+Therefore the initial Task 002 objects must not be used for Task 003/004 until the corrected QC comparison is reviewed.
 
-## Task 002 execution record
-- Local repository was updated from `origin/main` before execution; the run started from commit `dade84f`.
-- Processed 68 samples from GSE282701, GSE242889, GSE326201, GSE149614, and GSE299340.
-- GSE202642 and GSE290298 remained explicitly excluded.
-- All 68 input structures passed validation, including recovery of feature IDs, feature names, and barcodes for all GSE242889 samples.
-- Cells before/after QC: 447,030 / 372,882.
-- Candidate neutrophils before/after QC: 71,150 / 66,323.
-- Candidate neutrophil retention: 89.6% minimum, 93.6% median; 0/68 suspiciously low-retention flags.
-- 68 per-sample Seurat RDS objects were created on the server with raw counts preserved for QC-passing cells. RDS validation passed for 68/68 objects.
-- Review artifacts: `results/task002_neutrophil_retention_audit.csv`, `results/task002_qc_thresholds_by_sample.csv`, `results/task002_input_structure_audit.csv`, `results/task002_rds_validation.csv`, and `figures/task002_qc_review.pdf`.
-- Annotation and integration are paused pending review of the retention audit, sample-specific thresholds, and QC plots.
-- Task 002 was rerun after synchronizing from GitHub commit `244a322`; the rerun reproduced the QC tables and all 68-object validation metrics exactly. The regenerated QC PDF is included in the repository.
+## Corrected Task 002 rule
+QC thresholds must be selected independently from neutrophil identity:
+- min_nFeature_RNA: global-sample 1st percentile, bounded to 100–300;
+- min_nCount_RNA: global-sample 1st percentile, bounded to 200–500;
+- max_percent_mt: global-sample 98th percentile, bounded to 20–30%.
+
+High-confidence and broad granulocyte candidate definitions are used only for audit and must not determine thresholds.
+
+## Preservation
+Initial Task 002 report is archived as:
+`reports/task_002_initial_report.md`
+
+Initial server RDS objects under `objects/task002_seurat/` must remain unchanged.
+
+Corrected objects must be written under:
+`objects/task002_corrected_seurat/`
 
 ## Pending tasks
-1. Review Task 002 retention audit, adaptive thresholds, and QC plots; hold point is active
-2. Task 003 — broad annotation and neutrophil confirmation on five approved datasets
-3. Task 004 — integrate the five approved datasets into one Seurat object
-4. Task 005 — optional raw-data reprocessing if neutrophil recovery is implausibly poor
+1. Execute corrected Task 002 and compare with initial QC
+2. Web GPT/user review corrected QC
+3. Task 003 — broad annotation and neutrophil confirmation
+4. Task 004 — five-dataset Seurat integration
 
 ## Next execution command
-Await Web GPT/user review of Task 002 before executing Task 003.
+`Execute task_002.`
 
 ## Last update
 2026-09-24
