@@ -4,7 +4,12 @@
 PENDING
 
 ## Preconditions
-Task 003 reviewed and approved.
+Task 003 extension preparation **and Task 003 metadata correction** reviewed and approved.
+
+Required corrected metadata before this task:
+- nature_xue: 92 sample records -> 79 unique patients, including 10 Tumor–Adjacent paired patients;
+- nature_xue multiregion samples share base patient IDs (including A074 and A119);
+- CRA002308: abundance_eligible = CONDITIONAL, with paired within-cohort abundance sensitivity use only.
 
 ## Candidate cohorts
 - GSE282701
@@ -54,7 +59,11 @@ At minimum:
 7. For every cluster, report the fraction of rescued cells. Flag clusters dominated by rescued cells for marker/QC review.
 8. Do not delete a rescued-cell-dominated cluster solely because it was rescued; determine whether it has a coherent biological identity.
 9. Report neutrophil counts/fractions by dataset, patient and tissue.
-10. Separate `abundance_eligible` cohorts from atlas-only cohorts in all abundance summaries.
+10. Separate abundance roles in all abundance summaries:
+   - `YES`: primary abundance analysis if otherwise methodologically eligible;
+   - `CONDITIONAL`: report only under its permitted cohort-specific sensitivity rule;
+   - `NO`: state/atlas only.
+11. Never count multiple nature_xue regions from the same patient as independent patient-level replicates. For A119/A074 and any other multi-region patient, preserve sample-level data but use patient-aware statistics.
 
 ## Required outputs
 - `results/task004_celltype_counts.csv`

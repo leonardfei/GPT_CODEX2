@@ -55,11 +55,36 @@ obj[["source_author_annotation"]] <- as.character(source_meta$clusters)
 # Project metadata are separate from the author fields. Cancer_type HCC is used
 # as tumor and AL as adjacent liver, exactly as encoded by the uploaded object.
 obj[["dataset"]] <- "nature_xue"
-obj[["sample_id"]] <- as.character(source_meta$Sample)
-obj[["patient_id"]] <- paste0("nature_xue_", as.character(source_meta$Sample))
-obj[["tissue"]] <- ifelse(as.character(source_meta$Cancer_type) == "AL", "Adjacent", "Tumor")
-obj[["paired_status"]] <- "unknown"
-obj[["paired_id"]] <- "unknown"
+project_sample_id <- as.character(source_meta$Sample)
+project_tissue <- ifelse(as.character(source_meta$Cancer_type) == "AL", "Adjacent", "Tumor")
+base_patient <- project_sample_id
+base_patient <- sub("_HCC_N$", "", base_patient)
+base_patient <- sub("_HCC_IM[0-9]*$", "", base_patient)
+base_patient <- sub("_HCC$", "", base_patient)
+if (any(!grepl("^A[0-9]+$", base_patient))) {
+  stop("Unexpected HCC Sample naming after base-patient parsing: ",
+       paste(sort(unique(project_sample_id[!grepl("^A[0-9]+$", base_patient)])), collapse = ","))
+}
+project_patient_id <- paste0("nature_xue_", base_patient)
+sample_design <- unique(data.table(
+  sample_id = project_sample_id,
+  patient_id = project_patient_id,
+  tissue = project_tissue
+))
+patient_design <- sample_design[, .(
+  has_tumor = any(tissue == "Tumor"),
+  has_adjacent = any(tissue == "Adjacent")
+), by = patient_id]
+patient_design[, paired_status := ifelse(has_tumor & has_adjacent, "paired", "unpaired")]
+patient_design[, paired_id := ifelse(paired_status == "paired", patient_id, "unknown")]
+pair_status_map <- setNames(patient_design$paired_status, patient_design$patient_id)
+pair_id_map <- setNames(patient_design$paired_id, patient_design$patient_id)
+
+obj[["sample_id"]] <- project_sample_id
+obj[["patient_id"]] <- project_patient_id
+obj[["tissue"]] <- project_tissue
+obj[["paired_status"]] <- unname(pair_status_map[project_patient_id])
+obj[["paired_id"]] <- unname(pair_id_map[project_patient_id])
 obj[["etiology"]] <- "unknown"
 obj[["MVI"]] <- "unknown"
 obj[["platform"]] <- "author_processed_Seurat"
@@ -95,7 +120,7 @@ saveRDS(obj, out_path, compress = TRUE)
 
 md <- obj[[]]
 sample_manifest <- as.data.table(md[, c("dataset", "sample_id", "patient_id", "tissue", "paired_status", "paired_id", "etiology", "MVI", "platform", "selection_strategy", "matrix_type", "counts_available", "qc_provenance", "qc_status", "abundance_eligible", "analysis_inclusion"), drop = FALSE])
-sample_manifest[, n_cells := .N, by = .(dataset, sample_id, patient_id, tissue)]
+sample_manifest[, n_cells := .N, by = .(dataset, sample_id, patient_id, tissue, paired_status, paired_id)]
 sample_manifest <- unique(sample_manifest)
 fwrite(sample_manifest, manifest_path)
 
@@ -121,7 +146,11 @@ audit <- data.table(
   abundance_eligible = "CONDITIONAL",
   analysis_inclusion = "YES",
   original_object_unchanged = TRUE,
-  global_cell_ids = !anyDuplicated(colnames(obj))
+  global_cell_ids = !anyDuplicated(colnames(obj)),
+  n_sample_rows = uniqueN(sample_manifest$sample_id),
+  n_unique_patients = uniqueN(sample_manifest$patient_id),
+  n_paired_patients = uniqueN(sample_manifest[paired_status == "paired", patient_id]),
+  patient_pairing_rule = "strip _HCC, _HCC_N and _HCC_IM[0-9]* to base A-number; paired when patient has both Tumor and Adjacent"
 )
 fwrite(audit, audit_path)
 message("Saved ", out_path, " with ", ncol(obj), " cells")

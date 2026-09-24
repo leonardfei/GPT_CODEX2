@@ -55,8 +55,19 @@ nature_xue is an author-processed Seurat object. Do not discard or overwrite aut
 ## D011 — Abundance eligibility is separate from atlas inclusion
 A cohort can be included in the integrated atlas while being excluded from whole-tissue abundance meta-analysis. Task 003 must assign and document `abundance_eligible = YES / NO / CONDITIONAL` for each new cohort based on sampling/selection design and available provenance.
 
+## D012 — nature_xue patient identity and CRA002308 abundance use
+For nature_xue, patient identity is the base A-number. Sample suffixes `_HCC`, `_HCC_N`, and `_HCC_IM<number>` denote samples/regions from the same base patient rather than separate patients. A patient is paired only when both Tumor and Adjacent samples are present.
+
+For CRA002308, live nucleated-cell flow sorting after doublet exclusion is treated as composition-altering but not as lineage-specific immune enrichment. Therefore:
+- atlas/state analysis: allowed;
+- paired within-cohort Tumor–Adjacent abundance sensitivity analysis: allowed;
+- pooled cross-cohort absolute cell-fraction analysis as if unbiased whole tissue: not allowed.
+
+CRA002308 `abundance_eligible` is therefore `CONDITIONAL`, not `NO`.
+
 ## Decision log
 - 2026-09-23: D001–D007 initialized.
 - 2026-09-24: original five-cohort phase-1 set defined; GSE202642/GSE290298 held.
 - 2026-09-24: D009 added after corrected Task 002 review.
 - 2026-09-24: D008, D010 and D011 updated/added to expand the atlas with CRA002308, nature_xue and in_house.
+- 2026-09-24: D012 added after Task 003 review to correct nature_xue patient/pairing metadata and set CRA002308 abundance eligibility to CONDITIONAL.

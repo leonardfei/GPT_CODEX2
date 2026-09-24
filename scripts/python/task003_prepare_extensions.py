@@ -185,10 +185,10 @@ def metadata(dataset: str, sample: str) -> dict[str, str]:
             "dataset": dataset, "sample_id": sample, "patient_id": patient,
             "tissue": tissue, "paired_status": "paired", "paired_id": patient,
             "etiology": "unknown", "MVI": "unknown", "platform": "10x_scRNA_cell_called_matrix",
-            "selection_strategy": "flow-sorted all live nucleated cells after doublet exclusion; composition-altering selection",
+            "selection_strategy": "flow-sorted live nucleated cells after doublet exclusion; no lineage-specific immune enrichment documented; paired within-cohort abundance sensitivity analysis allowed",
             "matrix_type": "cell_called_count_matrix", "counts_available": "TRUE",
             "qc_provenance": "task003_corrected_task002_identity_independent",
-            "abundance_eligible": "NO", "analysis_inclusion": "YES",
+            "abundance_eligible": "CONDITIONAL", "analysis_inclusion": "YES",
         }
     if dataset == "in_house":
         match = re.fullmatch(r"(YJCA|YJP)(\d{2})", sample)
