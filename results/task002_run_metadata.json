@@ -1,0 +1,20 @@
+{
+  "task": "task_002",
+  "script": "task002_preprocess_qc.py",
+  "approved_datasets": [
+    "GSE149614",
+    "GSE242889",
+    "GSE282701",
+    "GSE299340",
+    "GSE326201"
+  ],
+  "excluded_datasets": [
+    "GSE202642",
+    "GSE290298"
+  ],
+  "n_samples": 68,
+  "candidate_definition": "(core_hits>=1 and support_hits>=2) or (support_hits>=3 and S100A8 and S100A9 expressed)",
+  "qc_filter": "nFeature_RNA >= sample_min_nFeature_RNA and nCount_RNA >= sample_min_nCount_RNA and percent.mt <= sample_max_percent_mt",
+  "doublet_evaluation": "high nCount_RNA and nFeature_RNA 99.5th-percentile proxy retained as review flag; no hard removal",
+  "raw_counts_preserved": true
+}
