@@ -1,68 +1,34 @@
 # Project Status
 
 ## Current task
-Task 004 broad annotation and neutrophil confirmation — COMPLETED
+Task 004b — eight-cohort unintegrated Seurat merge for manual annotation review — READY TO RUN
 
-## Last completed task
-Task 004 harmonized broad annotation and neutrophil confirmation — COMPLETED; corrected cell set and annotation layer are frozen for review before Task 005.
+## Purpose
+At user request, create one unintegrated Seurat object containing all eight cohorts before correcting the Task 004 annotation or running Task 005 integration.
 
-Task 002 corrected neutrophil-preserving QC for the original five cohorts remains accepted for downstream use.
+Target object:
+/data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas/objects/HCC_TA_8datasets_merged_review_v1.rds
 
-## Correction approved by Web GPT/user
-Two metadata issues identified during Task 003 review must be corrected without changing cell sets or rerunning QC:
+Expected:
+- 8 cohorts
+- 103 Task 004 annotated source objects
+- 1,490,852 cells
 
-1. **nature_xue patient/pairing**
-   - 92 HCC Tumor/AL sample records are currently stored.
-   - Sample suffixes `_HCC`, `_HCC_N`, and `_HCC_IM<number>` must map to the same base A-number patient.
-   - Expected: 79 unique patients, 10 Tumor–Adjacent paired patients, 69 Tumor-only patients.
-   - A074 and A119 contain multiple Tumor/IM sample records; these remain separate sample IDs but share patient IDs.
-   - A119_HCC, A119_HCC_IM1, A119_HCC_IM2 and A119_HCC_N must all map to `nature_xue_A119`.
+## Task 004 annotation status
+Task 004 computational execution completed, but its broad annotation is preliminary/unvalidated. The merge object must preserve these labels for user inspection without treating them as final.
 
-2. **CRA002308 abundance eligibility**
-   - Change from `NO` to `CONDITIONAL`.
-   - Live nucleated-cell flow sorting after doublet exclusion can alter composition, but no lineage-specific immune enrichment is documented.
-   - CRA002308 may be used for paired within-cohort Tumor–Adjacent abundance sensitivity analyses.
-   - It must not be pooled as an unbiased absolute whole-tissue fraction dataset across cohorts.
+Known issues retained for review:
+1. Task 004 rescued status was wrong for CRA002308/in_house; Task 004b corrects only this metadata in the merged review object.
+2. Task 004 marker-program annotation disagrees systematically with the Xue author reference for several lineages, especially neutrophil, dendritic and monocyte/macrophage.
 
-## Cell-set preservation
-The correction is metadata-only:
-- nature_xue must remain exactly 675,539 cells.
-- CRA002308 must remain exactly 158,741 corrected-QC cells.
-- No Task 002/003 QC threshold or cell pass/fail decision may change.
-- Original raw/source objects remain unchanged.
-
-## Original five cohorts
-- GSE282701
-- GSE242889
-- GSE326201
-- GSE149614
-- GSE299340
-
-Authoritative inputs:
-`objects/task002_corrected_seurat/`
-
-## Extension cohorts
-- CRA002308 — 7 paired patients; 158,741 cells; atlas YES; abundance CONDITIONAL after correction.
-- nature_xue — 675,539 cells; expected 79 patients with 10 paired after correction; atlas YES; abundance CONDITIONAL.
-- in_house — 10 paired patients; 233,716 cells; atlas YES; abundance CONDITIONAL pending sampling provenance.
-
-## On hold
-- GSE202642
-- GSE290298
-
-## Planned atlas
-Eight cohorts:
-GSE282701, GSE242889, GSE326201, GSE149614, GSE299340, CRA002308, nature_xue, in_house.
-
-Final target:
-`objects/HCC_TA_8datasets_integrated_v1.rds`
-
-## Pending tasks
-1. Web GPT/user review Task 004 annotation, neutrophil confirmation, rescued-cell audit, and abundance-role summaries
-2. Task 005 — final eight-cohort Seurat v5 integration, only after review approval
+## Pending
+1. Execute Task 004b
+2. User manually reviews annotation
+3. Rebuild/correct annotation as needed
+4. Run Task 005 integration only after annotation review
 
 ## Next execution command
-`Execute task_005.` after review and approval of the Task 004 hold point.
+Execute task_004b.
 
 ## Last update
 2026-09-25

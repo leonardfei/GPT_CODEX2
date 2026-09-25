@@ -65,9 +65,21 @@ For CRA002308, live nucleated-cell flow sorting after doublet exclusion is treat
 
 CRA002308 `abundance_eligible` is therefore `CONDITIONAL`, not `NO`.
 
+## D013 — Unintegrated merged review object
+Before final annotation correction and Task 005 integration, create a pure merged Seurat review object containing all eight cohorts and all 1,490,852 retained cells.
+
+The review object preserves RNA counts and metadata, preserves Task 004 annotations only as preliminary/unvalidated labels, preserves Xue author annotations, discards source-specific reductions/graphs, and performs no normalization, dimensionality reduction, reclustering, or batch correction.
+
+The only metadata correction performed during this merge is the known rescued-status error for CRA002308 and in_house.
+
+Target: objects/HCC_TA_8datasets_merged_review_v1.rds
+
+This object must not be described as an integrated atlas.
+
 ## Decision log
 - 2026-09-23: D001–D007 initialized.
 - 2026-09-24: original five-cohort phase-1 set defined; GSE202642/GSE290298 held.
 - 2026-09-24: D009 added after corrected Task 002 review.
 - 2026-09-24: D008, D010 and D011 updated/added to expand the atlas with CRA002308, nature_xue and in_house.
 - 2026-09-24: D012 added after Task 003 review to correct nature_xue patient/pairing metadata and set CRA002308 abundance eligibility to CONDITIONAL.
+- 2026-09-25: D013 added at user request to create an eight-cohort unintegrated merge object for manual annotation review before final annotation correction/integration.
