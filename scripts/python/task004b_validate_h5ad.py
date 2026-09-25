@@ -12,6 +12,7 @@ parser.add_argument("--h5ad", required=True)
 parser.add_argument("--expected-cells", type=int, default=1490852)
 parser.add_argument("--expected-datasets", type=int, default=8)
 parser.add_argument("--out", required=True)
+parser.add_argument("--r-validation", required=True)
 args = parser.parse_args()
 
 path = Path(args.h5ad)
@@ -38,7 +39,18 @@ if not adata.obs_names.is_unique:
 
 first_obs = str(adata.obs_names[0])
 last_obs = str(adata.obs_names[-1])
-sha256 = hashlib.sha256(path.read_bytes()).hexdigest()
+h = hashlib.sha256()
+with path.open("rb") as fh:
+    for chunk in iter(lambda: fh.read(16 * 1024 * 1024), b""):
+        h.update(chunk)
+sha256 = h.hexdigest()
+
+rval = pd.read_csv(args.r_validation)
+if len(rval) != 1:
+    raise RuntimeError("R validation CSV must contain exactly one row")
+expected_features = int(rval.loc[0, "n_features"])
+if adata.n_vars != expected_features:
+    raise RuntimeError(f"Feature count mismatch: {adata.n_vars} != {expected_features}")
 
 result = {
     "h5ad_path": str(path),

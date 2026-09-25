@@ -11,7 +11,7 @@ Create two equivalent unintegrated review objects containing all eight cohorts s
 ## Scope
 This task is merge/export only. Do not run RPCA, Harmony, CCA, normalization, PCA, UMAP, reclustering, annotation changes, cell removal, or downsampling.
 
-Use the 103 Task 004 annotated Seurat objects as inputs. Retain all 1,490,852 cells, RNA counts, and metadata. Source-specific PCA/UMAP/graphs must be discarded because they are not directly comparable across independently processed objects.
+Use the 103 Task 004 annotated Seurat objects as inputs. Retain all 1,490,852 cells, RNA counts, and metadata. Before merging, rebuild each slim review object with a standard single RNA counts Assay so that the final merged object has exactly one RNA `counts` layer; do not carry per-source v5 count layers into the merged review object. Source-specific PCA/UMAP/graphs must be discarded because they are not directly comparable across independently processed objects.
 
 The current `project_broad_celltype` and `neutrophil_confidence` fields must be retained strictly as preliminary review labels. Add:
 `annotation_status = preliminary_unvalidated_task004`.
@@ -75,7 +75,7 @@ Reload with `qs::qread()` and require:
 ### H5AD
 Open using Python `anndata.read_h5ad(..., backed="r")` and require:
 - exactly 1,490,852 observations;
-- same feature count as the QS object;
+- same feature count as recorded by the reloaded QS/Seurat validation;
 - exactly 8 datasets;
 - unique `obs_names`;
 - required `obs` metadata fields present;
@@ -88,6 +88,6 @@ Run:
 
 Then:
 
-`python scripts/python/task004b_validate_h5ad.py --h5ad /data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas/objects/HCC_TA_8datasets_merged_review_v1.h5ad --out /data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas/results/task004b_h5ad_validation.json`
+`python scripts/python/task004b_validate_h5ad.py --h5ad /data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas/objects/HCC_TA_8datasets_merged_review_v1.h5ad --r-validation /data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas/results/task004b_merge_review_validation.csv --out /data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas/results/task004b_h5ad_validation.json`
 
 Stop after validation. Do not execute Task 005.

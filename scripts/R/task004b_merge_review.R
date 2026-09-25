@@ -132,31 +132,28 @@ prepare_for_merge <- function(path, dataset) {
   counts <- get_counts(obj)
   if (any(counts < 0)) stop("Negative counts found: ", path)
 
-  slim <- CreateSeuratObject(
+  rna_assay <- CreateAssayObject(
     counts = counts,
-    assay = "RNA",
-    project = dataset,
-    meta.data = md,
     min.cells = 0,
     min.features = 0
+  )
+  slim <- CreateSeuratObject(
+    counts = rna_assay,
+    assay = "RNA",
+    project = dataset,
+    meta.data = md
   )
   if (!identical(colnames(slim), colnames(obj))) {
     stop("Cell IDs changed while slimming: ", path)
   }
 
-  rm(obj, counts, md)
+  rm(obj, counts, rna_assay, md)
   gc(verbose = FALSE)
   slim
 }
 
 merge_two <- function(x, y) {
-  tryCatch(
-    merge(x = x, y = y, merge.data = FALSE, merge.dr = FALSE, collapse = TRUE),
-    error = function(e) {
-      message("collapse=TRUE merge failed; retrying without collapse: ", conditionMessage(e))
-      merge(x = x, y = y, merge.data = FALSE, merge.dr = FALSE)
-    }
-  )
+  merge(x = x, y = y, merge.data = FALSE, merge.dr = FALSE)
 }
 
 cohort_rows <- list()
@@ -227,6 +224,14 @@ if (!setequal(unique(as.character(merged$dataset)), expected_datasets)) {
   stop("Final merged object dataset metadata mismatch")
 }
 
+rna_layers_final <- Layers(merged[["RNA"]])
+if (!identical(rna_layers_final, "counts")) {
+  stop(
+    "Merged review object must contain exactly one RNA counts layer; found: ",
+    paste(rna_layers_final, collapse = ", ")
+  )
+}
+
 merged@misc$merge_review <- list(
   task = "task_004b",
   purpose = "Eight-cohort unintegrated merge for manual annotation review",
@@ -246,7 +251,7 @@ if (!requireNamespace("qs", quietly = TRUE)) {
   stop("Package 'qs' is required to write the requested .qs Seurat object.")
 }
 message("Writing Seurat QS object: ", qs_path)
-qs::qsave(merged, qs_path, preset = "high", check_hash = TRUE)
+qs::qsave(merged, qs_path, preset = "high")
 
 message("Reload-validating QS object...")
 qs_check <- qs::qread(qs_path)
