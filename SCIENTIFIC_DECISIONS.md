@@ -72,9 +72,13 @@ The review object preserves RNA counts and metadata, preserves Task 004 annotati
 
 The only metadata correction performed during this merge is the known rescued-status error for CRA002308 and in_house.
 
-Target: objects/HCC_TA_8datasets_merged_review_v1.rds
+Targets:
+- `objects/HCC_TA_8datasets_merged_review_v1.qs` — Seurat review object
+- `objects/HCC_TA_8datasets_merged_review_v1.h5ad` — AnnData review object
 
-This object must not be described as an integrated atlas.
+The QS and H5AD must contain the same 1,490,852 cells and equivalent core metadata. The H5AD uses RNA counts as AnnData X. No final RDS review object is required.
+
+These objects must not be described as an integrated atlas.
 
 ## Decision log
 - 2026-09-23: D001–D007 initialized.

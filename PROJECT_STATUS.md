@@ -1,34 +1,44 @@
 # Project Status
 
 ## Current task
-Task 004b — eight-cohort unintegrated Seurat merge for manual annotation review — READY TO RUN
+Task 004b — eight-cohort unintegrated merge/export to QS + H5AD — READY TO RUN
 
 ## Purpose
-At user request, create one unintegrated Seurat object containing all eight cohorts before correcting the Task 004 annotation or running Task 005 integration.
+At user request, create two equivalent review objects containing all eight cohorts before correcting Task 004 annotation or running Task 005 integration.
 
-Target object:
-/data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas/objects/HCC_TA_8datasets_merged_review_v1.rds
+## Target outputs
+
+Seurat QS:
+`/data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas/objects/HCC_TA_8datasets_merged_review_v1.qs`
+
+AnnData H5AD:
+`/data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas/objects/HCC_TA_8datasets_merged_review_v1.h5ad`
 
 Expected:
 - 8 cohorts
 - 103 Task 004 annotated source objects
 - 1,490,852 cells
 
-## Task 004 annotation status
-Task 004 computational execution completed, but its broad annotation is preliminary/unvalidated. The merge object must preserve these labels for user inspection without treating them as final.
+No final RDS review object is required.
 
-Known issues retained for review:
-1. Task 004 rescued status was wrong for CRA002308/in_house; Task 004b corrects only this metadata in the merged review object.
-2. Task 004 marker-program annotation disagrees systematically with the Xue author reference for several lineages, especially neutrophil, dendritic and monocyte/macrophage.
+## Export semantics
+- QS contains the full unintegrated Seurat counts+metadata review object.
+- H5AD contains the same cells/features with RNA counts in `X` and metadata in `obs`.
+- Neither output is an integrated atlas.
+- No normalization, PCA, UMAP, reclustering, RPCA/Harmony/CCA, removal or downsampling is performed.
+
+## Task 004 annotation status
+Task 004 broad annotation remains preliminary/unvalidated and is retained only so the user can inspect it.
 
 ## Pending
 1. Execute Task 004b
-2. User manually reviews annotation
-3. Rebuild/correct annotation as needed
-4. Run Task 005 integration only after annotation review
+2. Validate QS by reload and H5AD with backed AnnData
+3. User manually reviews annotation
+4. Rebuild/correct annotation as needed
+5. Run Task 005 integration only after annotation review
 
 ## Next execution command
-Execute task_004b.
+`Execute task_004b.`
 
 ## Last update
 2026-09-25

@@ -19,9 +19,13 @@ validation_csv <- arg_value(
   "validation-csv",
   file.path(project_root, "results", "task004_object_validation.csv")
 )
-out_path <- arg_value(
-  "out",
-  file.path(project_root, "objects", "HCC_TA_8datasets_merged_review_v1.rds")
+qs_path <- arg_value(
+  "qs-out",
+  file.path(project_root, "objects", "HCC_TA_8datasets_merged_review_v1.qs")
+)
+h5ad_path <- arg_value(
+  "h5ad-out",
+  file.path(project_root, "objects", "HCC_TA_8datasets_merged_review_v1.h5ad")
 )
 cohort_root <- arg_value(
   "cohort-root",
@@ -33,10 +37,23 @@ report_path <- arg_value(
   file.path(project_root, "reports", "task_004b_merge_review_report.md")
 )
 
-dir.create(dirname(out_path), recursive = TRUE, showWarnings = FALSE)
+dir.create(dirname(qs_path), recursive = TRUE, showWarnings = FALSE)
+dir.create(dirname(h5ad_path), recursive = TRUE, showWarnings = FALSE)
 dir.create(cohort_root, recursive = TRUE, showWarnings = FALSE)
 dir.create(results_root, recursive = TRUE, showWarnings = FALSE)
 dir.create(dirname(report_path), recursive = TRUE, showWarnings = FALSE)
+
+required_export_packages <- c("qs", "SingleCellExperiment", "zellkonverter")
+missing_export_packages <- required_export_packages[
+  !vapply(required_export_packages, requireNamespace, logical(1), quietly = TRUE)
+]
+if (length(missing_export_packages)) {
+  stop(
+    "Missing required export package(s): ",
+    paste(missing_export_packages, collapse = ", "),
+    ". Task 004b must stop before the expensive merge so the environment can be fixed explicitly."
+  )
+}
 
 expected_datasets <- c(
   "GSE282701", "GSE242889", "GSE326201", "GSE149614", "GSE299340",
@@ -225,7 +242,46 @@ merged@misc$merge_review <- list(
   datasets = expected_datasets
 )
 
-saveRDS(merged, out_path, compress = "gzip")
+if (!requireNamespace("qs", quietly = TRUE)) {
+  stop("Package 'qs' is required to write the requested .qs Seurat object.")
+}
+message("Writing Seurat QS object: ", qs_path)
+qs::qsave(merged, qs_path, preset = "high", check_hash = TRUE)
+
+message("Reload-validating QS object...")
+qs_check <- qs::qread(qs_path)
+if (!inherits(qs_check, "Seurat")) stop("QS validation failed: object is not Seurat")
+if (ncol(qs_check) != expected_total) stop("QS validation failed: cell count mismatch")
+if (!identical(colnames(qs_check), colnames(merged))) stop("QS validation failed: ordered cell IDs changed")
+rm(qs_check)
+gc(verbose = FALSE)
+
+message("Preparing AnnData export...")
+if (!requireNamespace("SingleCellExperiment", quietly = TRUE) ||
+    !requireNamespace("zellkonverter", quietly = TRUE)) {
+  stop(
+    "Packages 'SingleCellExperiment' and 'zellkonverter' are required for the requested .h5ad export. ",
+    "Do not install from the server unless package connectivity is explicitly available."
+  )
+}
+
+# The review object intentionally contains counts only. Export those counts as AnnData X.
+sce <- SingleCellExperiment::SingleCellExperiment(
+  assays = list(counts = get_counts(merged)),
+  colData = S4Vectors::DataFrame(merged[[]])
+)
+rownames(sce) <- rownames(merged)
+colnames(sce) <- colnames(merged)
+
+message("Writing AnnData H5AD object: ", h5ad_path)
+zellkonverter::writeH5AD(
+  sce,
+  file = h5ad_path,
+  X_name = "counts",
+  compression = "gzip"
+)
+rm(sce)
+gc(verbose = FALSE)
 
 meta <- merged[[]]
 dataset_summary <- as.data.table(meta)[, .(
@@ -245,7 +301,10 @@ fwrite(metadata_fields, file.path(results_root, "task004b_merge_review_metadata_
 
 rna_layers <- Layers(merged[["RNA"]])
 validation <- data.table(
-  object_path = out_path,
+  qs_object_path = qs_path,
+  h5ad_object_path = h5ad_path,
+  qs_size_bytes = file.info(qs_path)$size,
+  h5ad_size_bytes = file.info(h5ad_path)$size,
   n_cells = ncol(merged),
   n_features = nrow(merged),
   n_datasets = uniqueN(meta$dataset),
@@ -261,8 +320,12 @@ validation <- data.table(
 )
 fwrite(validation, file.path(results_root, "task004b_merge_review_validation.csv"))
 
-sha <- tryCatch(
-  system2("sha256sum", out_path, stdout = TRUE, stderr = TRUE),
+sha_qs <- tryCatch(
+  system2("sha256sum", qs_path, stdout = TRUE, stderr = TRUE),
+  error = function(e) paste("sha256sum unavailable:", conditionMessage(e))
+)
+sha_h5ad <- tryCatch(
+  system2("sha256sum", h5ad_path, stdout = TRUE, stderr = TRUE),
   error = function(e) paste("sha256sum unavailable:", conditionMessage(e))
 )
 
@@ -289,8 +352,12 @@ report <- c(
   "",
   "## Output",
   "",
-  paste0("Merged review object: ", out_path),
-  paste0("SHA256: ", paste(sha, collapse = " ")),
+  paste0("Seurat QS object: ", qs_path),
+  paste0("AnnData H5AD object: ", h5ad_path),
+  paste0("QS SHA256: ", paste(sha_qs, collapse = " ")),
+  paste0("H5AD SHA256: ", paste(sha_h5ad, collapse = " ")),
+  "",
+  "The H5AD stores RNA counts in AnnData X and cell metadata in obs.",
   "",
   "## Important limitation",
   "",
@@ -299,5 +366,6 @@ report <- c(
 )
 writeLines(report, report_path)
 
-message("DONE: ", out_path)
+message("DONE QS: ", qs_path)
+message("DONE H5AD: ", h5ad_path)
 message("Cells: ", ncol(merged), "; features: ", nrow(merged))
