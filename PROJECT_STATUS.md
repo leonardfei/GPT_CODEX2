@@ -1,10 +1,10 @@
 # Project Status
 
 ## Current task
-Task 003 metadata correction — COMPLETED
+Task 004 broad annotation and neutrophil confirmation — COMPLETED
 
 ## Last completed task
-Task 003 extension-cohort preparation and metadata correction — COMPLETED; corrected manifest/pairing audit is ready for review before Task 004.
+Task 004 harmonized broad annotation and neutrophil confirmation — COMPLETED; corrected cell set and annotation layer are frozen for review before Task 005.
 
 Task 002 corrected neutrophil-preserving QC for the original five cohorts remains accepted for downstream use.
 
@@ -58,12 +58,11 @@ Final target:
 `objects/HCC_TA_8datasets_integrated_v1.rds`
 
 ## Pending tasks
-1. Web GPT/user review corrected manifest/pairing audit
-2. Task 004 — harmonized broad annotation and neutrophil confirmation
-3. Task 005 — final eight-cohort Seurat v5 integration
+1. Web GPT/user review Task 004 annotation, neutrophil confirmation, rescued-cell audit, and abundance-role summaries
+2. Task 005 — final eight-cohort Seurat v5 integration, only after review approval
 
 ## Next execution command
-`Execute task_004.` after review of the corrected manifest and pairing audit.
+`Execute task_005.` after review and approval of the Task 004 hold point.
 
 ## Last update
 2026-09-25

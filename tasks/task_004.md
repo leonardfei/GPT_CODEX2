@@ -1,7 +1,7 @@
 # Task 004 — Harmonized broad annotation and neutrophil confirmation across the expanded atlas
 
 ## Status
-PENDING
+COMPLETED
 
 ## Preconditions
 Task 003 extension preparation **and Task 003 metadata correction** reviewed and approved.
