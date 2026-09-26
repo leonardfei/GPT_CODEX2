@@ -287,20 +287,34 @@ if (!setequal(unique(as.character(merged$dataset)), expected_datasets)) {
   stop("Merged/checkpoint object dataset metadata mismatch")
 }
 
+# Preserve source-local identifiers and add globally unique project identifiers.
+merged$project_sample_id <- paste(as.character(merged$dataset), as.character(merged$sample_id), sep = "::")
+merged$project_patient_id <- paste(as.character(merged$dataset), as.character(merged$patient_id), sep = "::")
+if ("paired_id" %in% colnames(merged[[]])) {
+  raw_pair <- as.character(merged$paired_id)
+  valid_pair <- !is.na(raw_pair) & nzchar(raw_pair) & !(tolower(raw_pair) %in% c("unknown", "na", "none"))
+  merged$project_paired_id <- NA_character_
+  merged$project_paired_id[valid_pair] <- paste(
+    as.character(merged$dataset[valid_pair]),
+    raw_pair[valid_pair],
+    sep = "::"
+  )
+}
+
 meta_preexport <- merged[[]]
 if (data.table::uniqueN(meta_preexport$dataset) != 8L) {
   stop("Final merge validation failed: expected 8 datasets")
 }
-if (data.table::uniqueN(meta_preexport$sample_id) != 194L) {
+if (data.table::uniqueN(meta_preexport$project_sample_id) != 194L) {
   stop(
-    "Final merge validation failed: expected 194 sample IDs, found ",
-    data.table::uniqueN(meta_preexport$sample_id)
+    "Final merge validation failed: expected 194 globally unique project sample IDs, found ",
+    data.table::uniqueN(meta_preexport$project_sample_id)
   )
 }
-if (data.table::uniqueN(meta_preexport$patient_id) != 132L) {
+if (data.table::uniqueN(meta_preexport$project_patient_id) != 132L) {
   stop(
-    "Final merge validation failed: expected 132 patient IDs, found ",
-    data.table::uniqueN(meta_preexport$patient_id)
+    "Final merge validation failed: expected 132 globally unique project patient IDs, found ",
+    data.table::uniqueN(meta_preexport$project_patient_id)
   )
 }
 if (sum(meta_preexport$tissue == "Tumor", na.rm = TRUE) != 1039293L) {
@@ -464,8 +478,8 @@ validation <- data.table(
   n_cells = ncol(merged),
   n_features = nrow(merged),
   n_datasets = uniqueN(meta$dataset),
-  n_samples = uniqueN(meta$sample_id),
-  n_patients = uniqueN(meta$patient_id),
+  n_samples = uniqueN(meta$project_sample_id),
+  n_patients = uniqueN(meta$project_patient_id),
   duplicated_cell_ids = anyDuplicated(colnames(merged)),
   RNA_layers = paste(rna_layers, collapse = ";"),
   has_counts_layer = any(grepl("^counts", rna_layers)),
@@ -504,8 +518,8 @@ report <- c(
   "- 103 Task 004 annotated Seurat objects",
   "- 8 cohorts",
   paste0("- Total cells: ", format(ncol(merged), big.mark = ",")),
-  "- Samples: 194",
-  "- Patients: 132",
+  "- Samples: 194 (validated using globally unique project_sample_id)",
+  "- Patients: 132 (validated using globally unique project_patient_id)",
   "- Explicit paired Tumor-Adjacent patients: 59 (metadata design reference)",
   "- Tumor cells: 1,039,293",
   "- Adjacent cells: 451,559",

@@ -25,12 +25,13 @@ Pending:
 ## Mandatory final-merge invariants
 - 1,490,852 cells
 - 8 datasets
-- 194 samples
-- 132 patients
+- 194 globally unique project samples
+- 132 globally unique project patients
 - 1,039,293 Tumor cells
 - 451,559 Adjacent cells
 - 0 duplicated cell IDs
 - exactly one final RNA layer: `counts`
+- preserve source-local IDs and add globally unique project sample/patient/paired IDs
 
 ## Final target outputs
 Seurat:

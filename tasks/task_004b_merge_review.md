@@ -37,14 +37,16 @@ Merge the 8 validated cohort objects.
 The final object must satisfy all of the following before any format export is considered:
 - exactly 1,490,852 cells;
 - exactly 8 datasets;
-- exactly 194 sample IDs;
-- exactly 132 patient IDs;
+- exactly 194 globally unique `project_sample_id` values;
+- exactly 132 globally unique `project_patient_id` values;
 - 1,039,293 Tumor cells;
 - 451,559 Adjacent cells;
 - zero duplicated cell IDs;
 - RNA assay exists;
 - final RNA assay contains exactly one layer named `counts`;
-- `project_broad_celltype`, `neutrophil_confidence`, `source_author_annotation`, dataset/sample/patient/tissue and QC provenance metadata remain present;
+- preserve source-local `sample_id`, `patient_id`, and `paired_id`;
+- add globally unique `project_sample_id = dataset::sample_id`, `project_patient_id = dataset::patient_id`, and, when applicable, `project_paired_id = dataset::paired_id`;
+- `project_broad_celltype`, `neutrophil_confidence`, `source_author_annotation`, dataset/tissue and QC provenance metadata remain present;
 - Task 004 labels remain marked `annotation_status=preliminary_unvalidated_task004`.
 
 After validation, write the recoverable final merge checkpoint:
