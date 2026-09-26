@@ -34,7 +34,7 @@ H5AD mapping:
 - QS: qs
 - H5AD: anndataR + rhdf5
 
-If these are missing, merge still proceeds and the checkpoint is retained.
+If these are missing, merge still proceeds and the checkpoint is retained. A rerun automatically detects the checkpoint and skips the expensive 103-object merge. The checkpoint is removed only after both QS and H5AD validate successfully.
 
 ## Expected data
 - 8 cohorts

@@ -403,7 +403,6 @@ report <- c(
   "",
   paste0("Seurat QS object: ", qs_path),
   paste0("AnnData H5AD object: ", h5ad_path),
-  paste0("QS SHA256: ", paste(sha_qs, collapse = " ")),
   paste0("QS status: ", qs_status),
   paste0("H5AD status: ", h5ad_status),
   paste0("QS SHA256: ", paste(sha_qs, collapse = " ")),
