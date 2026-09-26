@@ -144,7 +144,188 @@ prepare_for_merge <- function(path, dataset) {
 }
 
 merge_two <- function(x, y) {
-  merge(x = x, y = y, merge.data = FALSE, merge.dr = FALSE)
+  z <- merge(x = x, y = y, merge.data = FALSE, merge.dr = FALSE)
+  z_layers <- Layers(z[["RNA"]])
+  if (!identical(z_layers, "counts")) {
+    z_count_layers <- z_layers[grepl("^counts", z_layers)]
+    if (!length(z_count_layers) || length(setdiff(z_layers, z_count_layers))) {
+      stop("Unexpected RNA layers after pairwise merge: ", paste(z_layers, collapse = ", "))
+    }
+    # Collapse after every pairwise merge so the final object never carries
+    # all eight source layers at once during JoinLayers.
+    z[["RNA"]] <- JoinLayers(z[["RNA"]], layers = "counts", new = "counts")
+    if (!identical(Layers(z[["RNA"]]), "counts")) {
+      stop("Pairwise merge did not produce one RNA counts layer")
+    }
+  }
+  z
+}
+
+new_task004b_chunked_counts <- function(chunks, feature_names, cell_names) {
+  offsets <- c(0L, cumsum(vapply(chunks, ncol, integer(1L))) )
+  structure(
+    list(
+      chunks = chunks,
+      feature_names = feature_names,
+      cell_names = cell_names,
+      offsets = offsets
+    ),
+    class = "task004b_chunked_counts"
+  )
+}
+
+dim.task004b_chunked_counts <- function(x) {
+  c(length(x$feature_names), length(x$cell_names))
+}
+
+dimnames.task004b_chunked_counts <- function(x) {
+  list(x$feature_names, x$cell_names)
+}
+
+`[.task004b_chunked_counts` <- function(x, i, j, drop = FALSE) {
+  dims <- dim(x)
+  if (missing(i)) i <- seq_len(dims[[1L]])
+  if (missing(j)) j <- seq_len(dims[[2L]])
+  if (is.character(i)) i <- match(i, x$feature_names)
+  if (is.character(j)) j <- match(j, x$cell_names)
+  if (anyNA(i) || anyNA(j)) stop("Unknown feature or cell in chunked counts subset")
+  if (identical(i, seq_len(dims[[1L]])) && identical(j, seq_len(dims[[2L]]))) {
+    return(x)
+  }
+  if (!length(i) || !length(j)) {
+    return(Matrix::Matrix(0, nrow = length(i), ncol = length(j), sparse = TRUE,
+                          dimnames = list(x$feature_names[i], x$cell_names[j])))
+  }
+  pieces <- vector("list", length(x$chunks))
+  keep <- logical(length(x$chunks))
+  for (k in seq_along(x$chunks)) {
+    hit <- which(j > x$offsets[[k]] & j <= x$offsets[[k + 1L]])
+    if (!length(hit)) next
+    keep[[k]] <- TRUE
+    local_j <- j[hit] - x$offsets[[k]]
+    pieces[[k]] <- x$chunks[[k]][i, local_j, drop = FALSE]
+    colnames(pieces[[k]]) <- x$cell_names[j[hit]]
+  }
+  out <- do.call(cbind, pieces[keep])
+  rownames(out) <- x$feature_names[i]
+  out
+}
+
+# Seurat 5.3.0 can exceed the available vector allocation limit when a
+# 1.49-million-cell object is assembled by repeated Assay5 merges followed by
+# JoinLayers.  The cohort checkpoints already contain one counts layer each,
+# so assemble the final object directly from their sparse count matrices and
+# metadata.  This preserves the unintegrated design while avoiding the
+# multi-layer merge representation entirely.
+assemble_cohorts_direct <- function(cohort_summary, datasets) {
+  counts_list <- vector("list", length(datasets))
+  meta_list <- vector("list", length(datasets))
+  used_cell_ids <- character()
+
+  # Discover the feature union in a lightweight pass before loading the large
+  # matrices for assembly. The union order is deterministic: the first
+  # cohort's order followed by previously unseen features from later cohorts.
+  feature_sets <- vector("list", length(datasets))
+  for (i in seq_along(datasets)) {
+    dataset_name <- datasets[[i]]
+    path <- cohort_summary[dataset == dataset_name, cohort_object_path][[1]]
+    obj <- readRDS(path)
+    feature_sets[[i]] <- rownames(LayerData(obj[["RNA"]], layer = "counts"))
+    if (anyDuplicated(feature_sets[[i]])) stop("Duplicate feature names in ", path)
+    rm(obj)
+    gc(verbose = FALSE)
+  }
+  feature_names <- unique(unlist(feature_sets, use.names = FALSE))
+  rm(feature_sets)
+  gc(verbose = FALSE)
+
+  for (i in seq_along(datasets)) {
+    dataset_name <- datasets[[i]]
+    path <- cohort_summary[dataset == dataset_name, cohort_object_path][[1]]
+    message("Final direct assembly: ", dataset_name)
+    obj <- readRDS(path)
+    if (!inherits(obj, "Seurat") || !"RNA" %in% Assays(obj)) {
+      stop("Cohort checkpoint is not a Seurat RNA object: ", path)
+    }
+    layers <- Layers(obj[["RNA"]])
+    if (!identical(layers, "counts")) {
+      stop(
+        "Cohort checkpoint must contain exactly one RNA counts layer for direct assembly; found ",
+        paste(layers, collapse = ", "), " in ", path
+      )
+    }
+
+    counts <- LayerData(obj[["RNA"]], layer = "counts")
+    if (!inherits(counts, "sparseMatrix")) {
+      counts <- as(counts, "dgCMatrix")
+    }
+    current_features <- rownames(counts)
+    if (!setequal(feature_names, current_features)) {
+      missing_features <- setdiff(feature_names, current_features)
+      zero_rows <- Matrix::Matrix(
+        0,
+        nrow = length(missing_features),
+        ncol = ncol(counts),
+        sparse = TRUE
+      )
+      rownames(zero_rows) <- missing_features
+      counts <- rbind(counts, zero_rows)
+      counts <- counts[feature_names, , drop = FALSE]
+      rm(zero_rows, missing_features)
+    } else if (!identical(feature_names, current_features)) {
+      counts <- counts[feature_names, , drop = FALSE]
+    }
+
+    old_cell_ids <- colnames(counts)
+    new_cell_ids <- paste(dataset_name, old_cell_ids, sep = "::")
+    new_cell_ids <- make.unique(c(used_cell_ids, new_cell_ids))
+    new_cell_ids <- tail(new_cell_ids, length(old_cell_ids))
+    used_cell_ids <- c(used_cell_ids, new_cell_ids)
+    colnames(counts) <- new_cell_ids
+
+    md <- obj[[]]
+    if (nrow(md) != ncol(counts)) stop("Metadata/count dimension mismatch: ", path)
+    rownames(md) <- new_cell_ids
+    counts_list[[i]] <- counts
+    meta_list[[i]] <- md
+
+    rm(obj, counts, md)
+    gc(verbose = FALSE)
+  }
+
+  combined_meta <- as.data.frame(
+    data.table::rbindlist(meta_list, fill = TRUE, use.names = TRUE)
+  )
+  cell_names <- unlist(lapply(meta_list, rownames), use.names = FALSE)
+  rownames(combined_meta) <- cell_names
+  chunked_counts <- new_task004b_chunked_counts(
+    chunks = counts_list,
+    feature_names = feature_names,
+    cell_names = cell_names
+  )
+
+  # Construct a standard Seurat shell from the first cohort, then replace its
+  # one counts layer with the chunked sparse representation. A conventional
+  # dgCMatrix cannot represent this object because its cumulative non-zero
+  # index exceeds the Matrix package's 32-bit pointer limit.
+  merged <- CreateSeuratObject(
+    counts = counts_list[[1L]],
+    assay = "RNA",
+    project = "HCC_TA_8datasets_merged_review_v1",
+    meta.data = meta_list[[1L]]
+  )
+  assay <- merged[["RNA"]]
+  assay@layers$counts <- chunked_counts
+  assay@cells <- SeuratObject:::LogMap(cell_names)
+  assay@features <- SeuratObject:::LogMap(feature_names)
+  merged@assays$RNA <- assay
+  merged@meta.data <- combined_meta
+  merged@active.ident <- factor(rep("unassigned", length(cell_names)),
+                                levels = "unassigned")
+  names(merged@active.ident) <- cell_names
+  rm(counts_list, meta_list, combined_meta, cell_names, chunked_counts, assay)
+  gc(verbose = FALSE)
+  merged
 }
 
 if (resume_from_checkpoint) {
@@ -186,7 +367,7 @@ for (dataset_name in expected_datasets) {
         if (length(existing_count_layers) > 1L) {
           acc[["RNA"]] <- JoinLayers(
             acc[["RNA"]],
-            layers = existing_count_layers,
+            layers = "counts",
             new = "counts"
           )
         }
@@ -252,19 +433,7 @@ if (sum(cohort_summary$n_cells) != expected_total) {
   stop("Cohort-level merge changed total cell count")
 }
 
-merged <- NULL
-for (dataset_name in expected_datasets) {
-  path <- cohort_summary[dataset == dataset_name, cohort_object_path][[1]]
-  message("Final merge: ", dataset_name)
-  obj <- readRDS(path)
-  if (is.null(merged)) {
-    merged <- obj
-  } else {
-    merged <- merge_two(merged, obj)
-  }
-  rm(obj)
-  gc(verbose = FALSE)
-}
+merged <- assemble_cohorts_direct(cohort_summary, expected_datasets)
 
 if (ncol(merged) != expected_total) {
   stop("Final merged object cell count mismatch: ", ncol(merged), " vs ", expected_total)
@@ -336,7 +505,7 @@ if (!identical(rna_layers_final, "counts")) {
   message("Joining ", length(count_layers_final), " merged RNA counts layers")
   merged[["RNA"]] <- JoinLayers(
     merged[["RNA"]],
-    layers = count_layers_final,
+    layers = "counts",
     new = "counts"
   )
   rna_layers_final <- Layers(merged[["RNA"]])
@@ -464,6 +633,7 @@ metadata_fields <- data.table(field = colnames(meta))
 fwrite(metadata_fields, file.path(results_root, "task004b_merge_review_metadata_fields.csv"))
 
 rna_layers <- Layers(merged[["RNA"]])
+counts_layer_class <- class(merged[["RNA"]]@layers[["counts"]])[[1L]]
 validation <- data.table(
   task004b_status = task004b_status,
   merge_validation_status = merge_validation_status,
@@ -482,6 +652,7 @@ validation <- data.table(
   n_patients = uniqueN(meta$project_patient_id),
   duplicated_cell_ids = anyDuplicated(colnames(merged)),
   RNA_layers = paste(rna_layers, collapse = ";"),
+  counts_layer_class = counts_layer_class,
   has_counts_layer = any(grepl("^counts", rna_layers)),
   has_project_broad_celltype = "project_broad_celltype" %in% colnames(meta),
   has_source_author_annotation = "source_author_annotation" %in% colnames(meta),
@@ -498,6 +669,12 @@ sha_h5ad <- if (file.exists(h5ad_path)) tryCatch(
   system2("sha256sum", h5ad_path, stdout = TRUE, stderr = TRUE),
   error = function(e) paste("sha256sum unavailable:", conditionMessage(e))
 ) else "NOT_CREATED"
+
+export_description <- if (identical(h5ad_status, "VALIDATED")) {
+  "The H5AD was written natively from the Seurat object using anndataR, with RNA counts in AnnData X and cell metadata in obs."
+} else {
+  "The H5AD was not written because the required anndataR and/or rhdf5 package is unavailable; the recoverable merge checkpoint was retained for export-only resume."
+}
 
 report <- c(
   "# Task 004b report — eight-cohort unintegrated Seurat merge for annotation review",
@@ -527,6 +704,8 @@ report <- c(
   "## Merge content",
   "",
   "- RNA counts and cell-level metadata were retained.",
+  paste0("- The final object contains ", format(nrow(merged), big.mark = ","), " features from the union of cohort feature sets; feature order was aligned and absent features were represented as sparse zeros."),
+  paste0("- The single RNA counts layer uses storage class ", counts_layer_class, "; chunked sparse blocks avoid Matrix's 32-bit cumulative non-zero index limit."),
   "- Pre-existing reductions/graphs were intentionally discarded because they are not directly comparable across independently processed source objects.",
   "- Current project_broad_celltype and neutrophil_confidence are retained only for review and are marked annotation_status=preliminary_unvalidated_task004.",
   "- Xue author labels remain available through source_author_annotation.",
@@ -534,15 +713,15 @@ report <- c(
   "",
   "## Output",
   "",
-  paste0("Seurat QS object: ", qs_path),
-  paste0("AnnData H5AD object: ", h5ad_path),
+  paste0("Seurat QS target: ", qs_path, if (identical(qs_status, "VALIDATED")) " (created)" else " (not created)"),
+  paste0("AnnData H5AD target: ", h5ad_path, if (identical(h5ad_status, "VALIDATED")) " (created)" else " (not created)"),
   paste0("QS status: ", qs_status),
   paste0("H5AD status: ", h5ad_status),
   paste0("QS SHA256: ", paste(sha_qs, collapse = " ")),
   paste0("H5AD SHA256: ", paste(sha_h5ad, collapse = " ")),
   paste0("Recoverable merge checkpoint: ", checkpoint_path),
   "",
-  "The H5AD is written natively from the Seurat object using anndataR, with RNA counts in AnnData X and cell metadata in obs.",
+  export_description,
   "",
   "## Important limitation",
   "",

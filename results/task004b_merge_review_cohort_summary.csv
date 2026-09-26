@@ -1,0 +1,9 @@
+dataset,cohort_object_path,n_cells,n_features,n_samples,n_patients,n_tumor,n_adjacent,n_preliminary_neutrophil
+CRA002308,/data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas/objects/task004_merge_review/cohort_merged/CRA002308_merged_counts_metadata.rds,158741,36601,14,7,91598,67143,9804
+GSE149614,/data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas/objects/task004_merge_review/cohort_merged/GSE149614_merged_counts_metadata.rds,63101,25712,18,10,34414,28687,1496
+GSE242889,/data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas/objects/task004_merge_review/cohort_merged/GSE242889_merged_counts_metadata.rds,52954,58845,10,5,26551,26403,2811
+GSE282701,/data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas/objects/task004_merge_review/cohort_merged/GSE282701_merged_counts_metadata.rds,137518,36611,12,6,73145,64373,5556
+GSE299340,/data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas/objects/task004_merge_review/cohort_merged/GSE299340_merged_counts_metadata.rds,76319,36601,10,5,38567,37752,4303
+GSE326201,/data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas/objects/task004_merge_review/cohort_merged/GSE326201_merged_counts_metadata.rds,92964,38311,18,10,54824,38140,1573
+in_house,/data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas/objects/task004_merge_review/cohort_merged/in_house_merged_counts_metadata.rds,233716,36601,20,10,107850,125866,23768
+nature_xue,/data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas/objects/task004_merge_review/cohort_merged/nature_xue_merged_counts_metadata.rds,675539,20002,92,79,612344,63195,16235

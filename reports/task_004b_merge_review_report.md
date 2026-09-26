@@ -1,43 +1,49 @@
-# Task 004b report — blocked before merge/export
+# Task 004b report — eight-cohort unintegrated Seurat merge for annotation review
 
 ## Status
 
-`BLOCKED` — the required export environment is incomplete. No Task 004b merge was started and no source object was modified.
+Task 004b status: MERGE_COMPLETED_EXPORT_PARTIAL
+Final merge validation: VALIDATED
+QS export: BLOCKED_MISSING_qs
+H5AD export: BLOCKED_MISSING_anndataR+rhdf5
 
-## Scope and input inspection
+## Purpose
 
-- Task: create the unintegrated eight-cohort review objects in QS and H5AD format.
-- Local repository was fast-forwarded from GitHub before inspection (`c0e6fdb`).
-- The Task 004 manifest contains 103 annotated source objects across the expected eight datasets.
-- The manifest records 1,490,852 expected cells.
-- On the compute server, the Task 004 annotated-object directory contained 103 `.rds` files and occupied approximately 4.4 GB.
-- No existing `HCC_TA_8datasets_merged_review_v1.qs` or `.h5ad` output was present, so no partial Task 004b output was reused or overwritten.
+This object was created for manual inspection of the current Task 004 annotations. No RPCA/Harmony integration, batch correction, normalization, PCA, UMAP, or reclustering was performed.
 
-## Required environment check
+## Input
 
-Checked in the project R environment:
+- 103 Task 004 annotated Seurat objects
+- 8 cohorts
+- Total cells: 1,490,852
+- Samples: 194 (validated using globally unique project_sample_id)
+- Patients: 132 (validated using globally unique project_patient_id)
+- Explicit paired Tumor-Adjacent patients: 59 (metadata design reference)
+- Tumor cells: 1,039,293
+- Adjacent cells: 451,559
 
-| Package | Result |
-|---|---|
-| Seurat | available; 5.3.0 |
-| data.table | available |
-| Matrix | available |
-| qs | missing |
-| SingleCellExperiment | missing |
-| zellkonverter | missing |
+## Merge content
 
-The server's default Python environment was also checked. Both required validation packages were missing:
+- RNA counts and cell-level metadata were retained.
+- The final object contains 68,394 features from the union of cohort feature sets; cohort-specific feature order was aligned and absent features were represented as sparse zeros.
+- The single RNA `counts` layer is stored as chunked sparse blocks because one standard `dgCMatrix` exceeded Matrix's 32-bit cumulative non-zero index limit; the layer coordinates remain globally aligned to the 68,394 features and 1,490,852 cells.
+- Pre-existing reductions/graphs were intentionally discarded because they are not directly comparable across independently processed source objects.
+- Current project_broad_celltype and neutrophil_confidence are retained only for review and are marked annotation_status=preliminary_unvalidated_task004.
+- Xue author labels remain available through source_author_annotation.
+- The known Task 004 rescued-status bug was corrected for CRA002308 and in_house in this review object only.
 
-- `anndata`: missing
-- `pandas`: missing
+## Output
 
-The task specification requires stopping before the expensive merge when export packages are missing. No package installation was attempted because the server must not be used for unapproved package downloads or installation.
+Seurat QS target: /data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas/objects/HCC_TA_8datasets_merged_review_v1.qs (not created)
+AnnData H5AD target: /data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas/objects/HCC_TA_8datasets_merged_review_v1.h5ad (not created)
+QS status: BLOCKED_MISSING_qs
+H5AD status: BLOCKED_MISSING_anndataR+rhdf5
+QS SHA256: NOT_CREATED
+H5AD SHA256: NOT_CREATED
+Recoverable merge checkpoint: /data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas/objects/task004_merge_review/checkpoint/HCC_TA_8datasets_merged_review_v1_checkpoint.rds
 
-## Outputs
+The final merge checkpoint is retained at approximately 36.6 GB for export-only resume. QS export requires `qs`; H5AD export requires `anndataR` and `rhdf5`. None of these packages is installed in the server R environment, so no format export was attempted.
 
-The required QS, H5AD, validation tables, validation JSON and successful-completion report were not generated because the prerequisite environment check failed.
+## Important limitation
 
-## Resolution required before rerun
-
-Provide or enable a server-side environment containing `qs`, `SingleCellExperiment`, `zellkonverter`, `anndata` and `pandas`, then rerun exactly the Task 004b commands. After a successful run, validate the QS reload and backed H5AD, update this report and mark the task completed. Task 005 remains unexecuted.
-
+This is a pure merge object, not an integrated atlas. Dataset-driven structure is expected if the merged counts are normalized/PCA/UMAPed without batch correction. Task 005 remains unexecuted.

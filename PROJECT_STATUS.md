@@ -1,26 +1,22 @@
 # Project Status
 
 ## Current task
-Task 004b — final eight-cohort merge and QS/H5AD export — READY TO EXECUTE
+Task 004b — final eight-cohort merge and QS/H5AD export — MERGE_COMPLETED_EXPORT_PARTIAL
 
 ## Current completion state
-Approximately 80% complete.
+Phase A is complete and validated; requested QS/H5AD exports remain blocked by missing server dependencies.
 
 Completed:
 - 8 cohort intermediate RDS objects have already been generated;
 - these represent 103 Task 004 source objects;
 - expected retained total: 1,490,852 cells;
 - source objects remain unchanged;
-- resumable merge logic is implemented.
+- final recoverable checkpoint was written on the server;
+- merge validation passed for all mandatory cell, metadata, ID and layer invariants.
 
 Pending:
-1. reuse and validate the 8 cohort intermediate objects;
-2. perform final eight-cohort merge;
-3. join any `counts.*` layers to one final RNA `counts` layer;
-4. validate final merged object;
-5. write recoverable final checkpoint;
-6. export/validate QS if `qs` is available;
-7. export/validate H5AD if `anndataR + rhdf5` are available.
+1. install/provide `qs` on the server and rerun export-only;
+2. install/provide `anndataR + rhdf5` on the server and rerun export-only.
 
 ## Mandatory final-merge invariants
 - 1,490,852 cells
@@ -30,7 +26,7 @@ Pending:
 - 1,039,293 Tumor cells
 - 451,559 Adjacent cells
 - 0 duplicated cell IDs
-- exactly one final RNA layer: `counts`
+- exactly one final RNA layer: `counts` (validated; stored as chunked sparse blocks because a single standard `dgCMatrix` exceeds Matrix's 32-bit non-zero index limit)
 - preserve source-local IDs and add globally unique project sample/patient/paired IDs
 
 ## Final target outputs
@@ -58,4 +54,4 @@ Task 005 remains paused.
 `Execute task_004b.`
 
 ## Last update
-2026-09-26 — Task 004b rewritten for direct execution from the existing 8 cohort intermediates.
+2026-09-26 — Task 004b Phase A completed; status is `MERGE_COMPLETED_EXPORT_PARTIAL` because `qs`, `anndataR` and `rhdf5` are unavailable on the server.
