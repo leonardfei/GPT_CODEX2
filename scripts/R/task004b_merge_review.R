@@ -128,13 +128,8 @@ prepare_for_merge <- function(path, dataset) {
   counts <- get_counts(obj)
   if (any(counts < 0)) stop("Negative counts found: ", path)
 
-  rna_assay <- CreateAssayObject(
-    counts = counts,
-    min.cells = 0,
-    min.features = 0
-  )
   slim <- CreateSeuratObject(
-    counts = rna_assay,
+    counts = counts,
     assay = "RNA",
     project = dataset,
     meta.data = md
@@ -143,7 +138,7 @@ prepare_for_merge <- function(path, dataset) {
     stop("Cell IDs changed while slimming: ", path)
   }
 
-  rm(obj, counts, rna_assay, md)
+  rm(obj, counts, md)
   gc(verbose = FALSE)
   slim
 }
@@ -159,27 +154,83 @@ if (resume_from_checkpoint) {
 } else {
 cohort_rows <- list()
 
-for (dataset in expected_datasets) {
-  files <- manifest[manifest$dataset == dataset, output_path]
-  message("Preparing cohort ", dataset, " from ", length(files), " object(s)")
-
+for (dataset_name in expected_datasets) {
   acc <- NULL
-  for (i in seq_along(files)) {
-    message("  [", i, "/", length(files), "] ", basename(files[[i]]))
-    slim <- prepare_for_merge(files[[i]], dataset)
-    if (is.null(acc)) {
-      acc <- slim
-    } else {
-      acc <- merge_two(acc, slim)
+  cohort_path <- file.path(cohort_root, paste0(dataset_name, "_merged_counts_metadata.rds"))
+  expected_dataset_cells <- sum(as.numeric(manifest[dataset == dataset_name, annotated_object_cells]))
+
+  if (file.exists(cohort_path)) {
+    message("Checking existing cohort checkpoint: ", cohort_path)
+    acc <- tryCatch(readRDS(cohort_path), error = function(e) {
+      warning("Existing cohort checkpoint is unreadable and will be rebuilt: ", conditionMessage(e))
+      NULL
+    })
+
+    if (!is.null(acc)) {
+      existing_layers <- if (inherits(acc, "Seurat") && "RNA" %in% Assays(acc)) {
+        Layers(acc[["RNA"]])
+      } else {
+        character()
+      }
+      existing_count_layers <- existing_layers[grepl("^counts", existing_layers)]
+      if (!inherits(acc, "Seurat") || !"RNA" %in% Assays(acc) ||
+          !length(existing_count_layers) ||
+          ncol(acc) != expected_dataset_cells ||
+          anyDuplicated(colnames(acc)) ||
+          !setequal(unique(as.character(acc$dataset)), dataset_name)) {
+        warning("Existing cohort checkpoint failed structural validation and will be rebuilt: ", cohort_path)
+        rm(acc)
+        acc <- NULL
+      } else if (!identical(existing_layers, "counts")) {
+        message("Stripping non-count RNA layers from existing cohort checkpoint")
+        if (length(existing_count_layers) > 1L) {
+          acc[["RNA"]] <- JoinLayers(
+            acc[["RNA"]],
+            layers = existing_count_layers,
+            new = "counts"
+          )
+        }
+        md <- acc[[]]
+        counts <- LayerData(acc[["RNA"]], layer = "counts")
+        slim <- CreateSeuratObject(
+          counts = counts,
+          assay = "RNA",
+          project = dataset_name,
+          meta.data = md
+        )
+        if (!identical(colnames(slim), colnames(acc))) {
+          stop("Cell IDs changed while sanitizing cohort checkpoint: ", cohort_path)
+        }
+        saveRDS(slim, cohort_path, compress = "gzip")
+        rm(acc, counts, md)
+        acc <- slim
+        rm(slim)
+        gc(verbose = FALSE)
+      }
     }
-    rm(slim)
-    gc(verbose = FALSE)
   }
 
-  cohort_path <- file.path(cohort_root, paste0(dataset, "_merged_counts_metadata.rds"))
-  saveRDS(acc, cohort_path, compress = "gzip")
+  if (is.null(acc)) {
+    files <- manifest[dataset == dataset_name, output_path]
+    message("Preparing cohort ", dataset_name, " from ", length(files), " source object(s)")
+    for (i in seq_along(files)) {
+      message("  [", i, "/", length(files), "] ", basename(files[[i]]))
+      slim <- prepare_for_merge(files[[i]], dataset_name)
+      if (is.null(acc)) {
+        acc <- slim
+      } else {
+        acc <- merge_two(acc, slim)
+      }
+      rm(slim)
+      gc(verbose = FALSE)
+    }
+    # Keep the resumable intermediate uncompressed to avoid the large peak RAM
+    # incurred by gzip serialization of the nature_xue cohort.
+    saveRDS(acc, cohort_path, compress = FALSE)
+  }
+
   cohort_rows[[length(cohort_rows) + 1L]] <- data.table(
-    dataset = dataset,
+    dataset = dataset_name,
     cohort_object_path = cohort_path,
     n_cells = ncol(acc),
     n_features = nrow(acc),
@@ -202,9 +253,9 @@ if (sum(cohort_summary$n_cells) != expected_total) {
 }
 
 merged <- NULL
-for (dataset in expected_datasets) {
-  path <- cohort_summary[cohort_summary$dataset == dataset, cohort_object_path][[1]]
-  message("Final merge: ", dataset)
+for (dataset_name in expected_datasets) {
+  path <- cohort_summary[dataset == dataset_name, cohort_object_path][[1]]
+  message("Final merge: ", dataset_name)
   obj <- readRDS(path)
   if (is.null(merged)) {
     merged <- obj
@@ -238,10 +289,26 @@ if (!setequal(unique(as.character(merged$dataset)), expected_datasets)) {
 
 rna_layers_final <- Layers(merged[["RNA"]])
 if (!identical(rna_layers_final, "counts")) {
-  stop(
-    "Merged review object must contain exactly one RNA counts layer; found: ",
-    paste(rna_layers_final, collapse = ", ")
+  count_layers_final <- rna_layers_final[grepl("^counts", rna_layers_final)]
+  if (!length(count_layers_final) || length(setdiff(rna_layers_final, count_layers_final))) {
+    stop(
+      "Merged review object has unexpected RNA layers; found: ",
+      paste(rna_layers_final, collapse = ", ")
+    )
+  }
+  message("Joining ", length(count_layers_final), " merged RNA counts layers")
+  merged[["RNA"]] <- JoinLayers(
+    merged[["RNA"]],
+    layers = count_layers_final,
+    new = "counts"
   )
+  rna_layers_final <- Layers(merged[["RNA"]])
+  if (!identical(rna_layers_final, "counts")) {
+    stop(
+      "Merged review object must contain exactly one RNA counts layer after JoinLayers; found: ",
+      paste(rna_layers_final, collapse = ", ")
+    )
+  }
 }
 
 merged@misc$merge_review <- list(
@@ -261,7 +328,9 @@ merged@misc$merge_review <- list(
 
 if (!resume_from_checkpoint) {
   message("Writing recoverable merge checkpoint: ", checkpoint_path)
-  saveRDS(merged, checkpoint_path, compress = "gzip")
+  # The checkpoint is server-side and temporary; avoid compression peaks for
+  # the full eight-cohort object.
+  saveRDS(merged, checkpoint_path, compress = FALSE)
 }
 
 qs_status <- "NOT_ATTEMPTED"
