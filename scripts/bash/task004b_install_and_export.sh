@@ -18,9 +18,32 @@ echo "Free disk space: ${FREE_GB} GB"
 export R_LIBS_USER="${R_LIB}"
 Rscript "${ROOT}/scripts/R/task004b_install_export_deps.R" --project-root "${ROOT}" --lib "${R_LIB}"
 PYTHON_BIN="${PYTHON_BIN:-python3}"
-PY_VER=$("${PYTHON_BIN}" -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
-echo "System Python: ${PY_VER}"
-[[ -x "${PY_ENV}/bin/python" ]] || "${PYTHON_BIN}" -m venv "${PY_ENV}"
+SYS_PY_MAJOR=$("${PYTHON_BIN}" -c 'import sys; print(sys.version_info.major)')
+SYS_PY_MINOR=$("${PYTHON_BIN}" -c 'import sys; print(sys.version_info.minor)')
+echo "System Python: ${SYS_PY_MAJOR}.${SYS_PY_MINOR}"
+
+if (( SYS_PY_MAJOR == 3 && SYS_PY_MINOR >= 11 )); then
+  if [[ ! -x "${PY_ENV}/bin/python" ]]; then
+    "${PYTHON_BIN}" -m venv "${PY_ENV}"
+  fi
+else
+  CONDA_BIN="$(command -v conda || true)"
+  if [[ -z "${CONDA_BIN}" ]]; then
+    for candidate in "${HOME}/miniconda3/bin/conda" "/data/lf_data/miniconda3/bin/conda" "/opt/conda/bin/conda"; do
+      if [[ -x "${candidate}" ]]; then CONDA_BIN="${candidate}"; break; fi
+    done
+  fi
+  if [[ -z "${CONDA_BIN}" ]]; then
+    echo "ERROR: system Python is <3.11 and conda was not found." >&2
+    exit 4
+  fi
+  if [[ -d "${PY_ENV}" && ! -x "${PY_ENV}/bin/python" ]]; then rm -rf "${PY_ENV}"; fi
+  if [[ ! -x "${PY_ENV}/bin/python" ]] || ! "${PY_ENV}/bin/python" -c 'import sys; raise SystemExit(0 if sys.version_info >= (3,11) else 1)'; then
+    rm -rf "${PY_ENV}"
+    "${CONDA_BIN}" create -y -p "${PY_ENV}" python=3.12 pip
+  fi
+fi
+
 "${PY_ENV}/bin/python" -m pip install --upgrade pip setuptools wheel
 PY_MAJOR=$("${PY_ENV}/bin/python" -c 'import sys; print(sys.version_info.major)')
 PY_MINOR=$("${PY_ENV}/bin/python" -c 'import sys; print(sys.version_info.minor)')
@@ -29,7 +52,8 @@ if (( PY_MAJOR == 3 && PY_MINOR >= 12 )); then
 elif (( PY_MAJOR == 3 && PY_MINOR == 11 )); then
   "${PY_ENV}/bin/pip" install "anndata>=0.12.19,<0.13" "h5py>=3.11" "scipy>=1.12" "pandas>=2.2"
 else
-  echo "ERROR: Python >=3.11 required; found ${PY_MAJOR}.${PY_MINOR}" >&2; exit 4
+  echo "ERROR: isolated Python >=3.11 could not be prepared; found ${PY_MAJOR}.${PY_MINOR}" >&2
+  exit 4
 fi
 echo "--- Export QS ---"
 Rscript "${ROOT}/scripts/R/task004b_export_qs.R" --project-root "${ROOT}" --lib "${R_LIB}"

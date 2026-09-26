@@ -47,7 +47,7 @@ Validate dimensions, global IDs, dataset/sample/patient counts, tissue cell coun
 - R: `.task004b_Rlib`
 - Python: `.task004b_pyenv`
 
-Do not update the main analysis environment.
+Do not update the main analysis environment. If system Python is <3.11, automatically create an isolated Python 3.12 environment with an available conda installation (including likely project/local Miniconda paths).
 
 ## Disk
 Require >=60 GB free before export. Remove temporary cohort H5AD parts only after final H5AD validates. Retain the 36.6-GB merge checkpoint for rollback until the user explicitly approves deletion.
