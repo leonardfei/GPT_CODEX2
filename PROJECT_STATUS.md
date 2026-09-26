@@ -1,57 +1,38 @@
 # Project Status
 
 ## Current task
-Task 004b — final eight-cohort merge and QS/H5AD export — MERGE_COMPLETED_EXPORT_PARTIAL
+Task 004b — export validated eight-cohort merge to QS + H5AD — READY TO EXECUTE
 
-## Current completion state
-Phase A is complete and validated; requested QS/H5AD exports remain blocked by missing server dependencies.
-
-Completed:
-- 8 cohort intermediate RDS objects have already been generated;
-- these represent 103 Task 004 source objects;
-- expected retained total: 1,490,852 cells;
-- source objects remain unchanged;
-- final recoverable checkpoint was written on the server;
-- merge validation passed for all mandatory cell, metadata, ID and layer invariants.
-
-Pending:
-1. install/provide `qs` on the server and rerun export-only;
-2. install/provide `anndataR + rhdf5` on the server and rerun export-only.
-
-## Mandatory final-merge invariants
+The final merge is already VALIDATED:
 - 1,490,852 cells
+- 68,394 features
 - 8 datasets
-- 194 globally unique project samples
-- 132 globally unique project patients
+- 194 samples
+- 132 patients
 - 1,039,293 Tumor cells
 - 451,559 Adjacent cells
-- 0 duplicated cell IDs
-- exactly one final RNA layer: `counts` (validated; stored as chunked sparse blocks because a single standard `dgCMatrix` exceeds Matrix's 32-bit non-zero index limit)
-- preserve source-local IDs and add globally unique project sample/patient/paired IDs
+- zero duplicate cell IDs
 
-## Final target outputs
-Seurat:
-`/data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas/objects/HCC_TA_8datasets_merged_review_v1.qs`
+The user has explicitly authorized downloading export dependencies.
 
-AnnData:
-`/data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas/objects/HCC_TA_8datasets_merged_review_v1.h5ad`
+## Export architecture
+QS:
+- install archived qs 0.27.3 in isolated `.task004b_Rlib`
+- write/reload validate `objects/HCC_TA_8datasets_merged_review_v1.qs`
 
-Recoverable checkpoint:
-`/data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas/objects/task004_merge_review/checkpoint/HCC_TA_8datasets_merged_review_v1_checkpoint.rds`
+H5AD:
+- install anndataR + rhdf5 in isolated R library
+- write eight standard cohort H5AD parts
+- install AnnData in isolated `.task004b_pyenv`
+- concatenate on disk with outer gene union and sparse zero fill
+- validate final `objects/HCC_TA_8datasets_merged_review_v1.h5ad`
 
-## Export dependencies
-- QS: `qs`
-- H5AD: `anndataR` + `rhdf5`
+This avoids converting the custom 1.49M-cell chunked counts layer into one R dgCMatrix.
 
-Missing export dependencies must not block or invalidate the final merge. If they are absent, finish Phase A, retain the checkpoint and report `MERGE_COMPLETED_EXPORT_PARTIAL`.
+## Next execution
+`Execute task_004b export.`
 
-## Completion rule
-Task 004b is `COMPLETED` only if final merge + QS validation + H5AD validation all pass.
+Equivalent:
+`bash scripts/bash/task004b_install_and_export.sh /data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas`
 
 Task 005 remains paused.
-
-## Next execution command
-`Execute task_004b.`
-
-## Last update
-2026-09-26 — Task 004b Phase A completed; status is `MERGE_COMPLETED_EXPORT_PARTIAL` because `qs`, `anndataR` and `rhdf5` are unavailable on the server.
