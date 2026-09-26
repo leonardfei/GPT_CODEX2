@@ -72,12 +72,12 @@ for (d in expected_datasets) {
   md <- md[, all_fields, drop=FALSE]
   e <- CreateSeuratObject(counts=counts, assay="RNA", project=d, meta.data=md)
   out <- file.path(out_dir, paste0(d,".h5ad")); if (file.exists(out)) unlink(out)
-  anndataR::write_h5ad(e, path=out, compression="gzip", chunk_size="auto", mode="w",
+  anndataR::write_h5ad(e, path=out, compression="gzip", mode="w",
     assay_name="RNA", x_mapping="counts", layers_mapping=FALSE, obs_mapping=TRUE,
     var_mapping=FALSE, obsm_mapping=FALSE, varm_mapping=FALSE, obsp_mapping=FALSE,
     varp_mapping=FALSE, uns_mapping=FALSE)
   ad <- anndataR::read_h5ad(out, as="HDF5AnnData", mode="r", backed=TRUE)
-  dims <- dim(ad)
+  dims <- ad$shape()
   if (dims[[1L]] != ncol(counts) || dims[[2L]] != nrow(counts)) stop("Cohort H5AD dimension mismatch: ", d)
   rm(ad)
   nnz <- length(as(counts,"dgCMatrix")@x)

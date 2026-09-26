@@ -1,0 +1,20 @@
+{
+  "status": "VALIDATED",
+  "h5ad_path": "/data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas/objects/HCC_TA_8datasets_merged_review_v1.h5ad",
+  "h5ad_size_bytes": 38153553374,
+  "anndata_version": "0.13.4",
+  "n_obs": 1490852,
+  "n_vars": 68394,
+  "n_datasets": 8,
+  "n_samples": 194,
+  "n_patients": 132,
+  "tumor_cells": 1039293,
+  "adjacent_cells": 451559,
+  "obs_names_unique": true,
+  "var_names_unique": true,
+  "X_encoding": "csr_matrix",
+  "nnz": 2885352168,
+  "expected_nnz": 2885352168,
+  "join": "outer",
+  "fill_value": 0
+}

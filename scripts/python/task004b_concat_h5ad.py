@@ -9,6 +9,7 @@ import numpy as np
 p=argparse.ArgumentParser()
 p.add_argument("--manifest", required=True); p.add_argument("--out", required=True)
 p.add_argument("--validation", required=True); p.add_argument("--max-loaded-elems", type=int, default=50_000_000)
+p.add_argument("--validate-existing", action="store_true")
 a=p.parse_args()
 rows=list(csv.DictReader(open(a.manifest, encoding="utf-8")))
 order=["GSE282701","GSE242889","GSE326201","GSE149614","GSE299340","CRA002308","nature_xue","in_house"]
@@ -19,33 +20,36 @@ for d,f in files.items():
     if not Path(f).exists(): raise FileNotFoundError(f"{d}: {f}")
 expected_nnz=sum(int(by[d]["nnz"]) for d in order)
 out=Path(a.out); out.parent.mkdir(parents=True,exist_ok=True)
-tmp=Path(str(out)+".partial")
-for x in (tmp,out):
-    if x.exists(): x.unlink()
-ad.experimental.concat_on_disk(files,tmp,axis="obs",join="outer",merge="first",uns_merge=None,label=None,index_unique=None,fill_value=0,pairwise=False,max_loaded_elems=a.max_loaded_elems)
-os.replace(tmp,out)
-lazy=ad.experimental.read_lazy(out)
-if tuple(lazy.shape)!=(1490852,68394): raise RuntimeError(f"shape mismatch: {lazy.shape}")
-try:
-    if getattr(lazy,"file",None) is not None: lazy.file.close()
-except Exception: pass
+# Keep the temporary path ending in .h5ad so anndata selects its HDF5 backend
+# rather than treating the temporary store as a Zarr directory.
+tmp=Path(str(out)+".partial.h5ad")
+if a.validate_existing:
+    if not out.exists(): raise FileNotFoundError(out)
+else:
+    for x in (tmp,out):
+        if x.exists(): x.unlink()
+    ad.experimental.concat_on_disk(files,tmp,axis="obs",join="outer",merge="first",uns_merge=None,label=None,index_unique=None,fill_value=0,pairwise=False,max_loaded_elems=a.max_loaded_elems)
+    os.replace(tmp,out)
 
 def dec(arr):
     arr=np.asarray(arr)
     if arr.dtype.kind in {"S","O"}:
         return np.array([v.decode() if isinstance(v,(bytes,bytearray)) else str(v) for v in arr],dtype=object)
     return arr
-def idx(g):
-    k=g.attrs.get("_index","_index"); k=k.decode() if isinstance(k,bytes) else k
-    return dec(g[k][...])
-def col(g,n):
-    z=g[n]
+def obj_values(z):
     if isinstance(z,h5py.Dataset): return dec(z[...])
     enc=z.attrs.get("encoding-type",""); enc=enc.decode() if isinstance(enc,bytes) else enc
     if enc=="categorical":
         codes=np.asarray(z["codes"][...]); cats=dec(z["categories"][...]); out=np.empty(len(codes),dtype=object)
         miss=codes<0; out[miss]=None; good=~miss; out[good]=cats[codes[good]]; return out
-    raise RuntimeError(f"Unsupported obs encoding {n}: {enc}")
+    for key in ("values","data","array"):
+        if key in z and isinstance(z[key],h5py.Dataset): return dec(z[key][...])
+    raise RuntimeError(f"Unsupported axis encoding {enc}: {list(z.keys())}")
+def idx(g):
+    k=g.attrs.get("_index","_index"); k=k.decode() if isinstance(k,bytes) else k
+    return obj_values(g[k])
+def col(g,n):
+    return obj_values(g[n])
 
 with h5py.File(out,"r") as f:
     on=idx(f["obs"]); vn=idx(f["var"])

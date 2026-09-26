@@ -2,10 +2,10 @@
 
 ## Status
 
-Task 004b status: MERGE_COMPLETED_EXPORT_PARTIAL
+Task 004b status: COMPLETED
 Final merge validation: VALIDATED
-QS export: BLOCKED_MISSING_qs
-H5AD export: BLOCKED_MISSING_anndataR+rhdf5
+QS export: VALIDATED
+H5AD export: VALIDATED
 
 ## Purpose
 
@@ -34,15 +34,24 @@ This object was created for manual inspection of the current Task 004 annotation
 
 ## Output
 
-Seurat QS target: /data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas/objects/HCC_TA_8datasets_merged_review_v1.qs (not created)
-AnnData H5AD target: /data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas/objects/HCC_TA_8datasets_merged_review_v1.h5ad (not created)
-QS status: BLOCKED_MISSING_qs
-H5AD status: BLOCKED_MISSING_anndataR+rhdf5
-QS SHA256: NOT_CREATED
-H5AD SHA256: NOT_CREATED
+Seurat QS target: /data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas/objects/HCC_TA_8datasets_merged_review_v1.qs (4,754,019,531 bytes; server)
+AnnData H5AD target: /data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas/objects/HCC_TA_8datasets_merged_review_v1.h5ad (38,153,553,374 bytes; server)
+QS status: VALIDATED
+H5AD status: VALIDATED
+QS validation record: [task004b_qs_validation.csv](../results/task004b_qs_validation.csv)
+H5AD parts manifest: [task004b_h5ad_parts_manifest.csv](../results/task004b_h5ad_parts_manifest.csv)
+H5AD validation record: [task004b_h5ad_validation.json](../results/task004b_h5ad_validation.json)
 Recoverable merge checkpoint: /data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas/objects/task004_merge_review/checkpoint/HCC_TA_8datasets_merged_review_v1_checkpoint.rds
 
-The final merge checkpoint is retained at approximately 36.6 GB for export-only resume. QS export requires `qs`; H5AD export requires `anndataR` and `rhdf5`. None of these packages is installed in the server R environment, so no format export was attempted.
+The final merge checkpoint is retained at approximately 36.6 GB for rollback. The eight temporary H5AD parts were removed only after final validation. Raw/source data were not modified.
+
+## Export reproducibility and anomalies
+
+- Server R runtime: R 4.3.3; Seurat 5.3.0.
+- Export R packages: qs 0.27.3, stringfish 0.18.0, anndataR 0.2.0, rhdf5 2.46.1, rhdf5filters 1.14.1, Rhdf5lib 1.24.2.
+- H5AD runtime: Python 3.14; anndata 0.13.4, h5py 3.16.0, scipy 1.18.1, pandas 3.0.6, numpy 2.5.3.
+- H5AD validation: `X` is `csr_matrix`; `nnz=2,885,352,168`, matching the sum of the eight part manifests; `join=outer`, `fill_value=0`.
+- Compatibility repairs were implementation-only: anndataR 0.2.0 does not accept the newer `chunk_size` argument; its HDF5AnnData dimension accessor is `shape()` rather than `dim()`; and the anndata temporary concat path must retain a `.h5ad` suffix to select the HDF5 backend. The final validator uses HDF5 axis encodings directly and does not require optional `xarray` lazy loading.
 
 ## Important limitation
 

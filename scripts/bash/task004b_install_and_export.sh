@@ -4,9 +4,11 @@ set -euo pipefail
 ROOT="${1:-/data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas}"
 R_LIB="${ROOT}/.task004b_Rlib"
 PY_ENV="${ROOT}/.task004b_pyenv"
+PY_WHEEL_DIR="${ROOT}/tmp/task004b_py_wheels"
 PARTS_DIR="${ROOT}/tmp/task004b_h5ad_parts"
 LOG="${ROOT}/logs/task004b_export_formats.log"
 mkdir -p "${R_LIB}" "${PARTS_DIR}" "${ROOT}/logs" "${ROOT}/results"
+export PATH="${PY_ENV}:${PY_ENV}/bin:${ROOT}/tmp/r_env/bin:${PATH}"
 exec > >(tee -a "${LOG}") 2>&1
 echo "=== Task 004b format export ==="; date; echo "ROOT=${ROOT}"
 CHECKPOINT="${ROOT}/objects/task004_merge_review/checkpoint/HCC_TA_8datasets_merged_review_v1_checkpoint.rds"
@@ -24,7 +26,20 @@ echo "System Python: ${SYS_PY_MAJOR}.${SYS_PY_MINOR}"
 
 if (( SYS_PY_MAJOR == 3 && SYS_PY_MINOR >= 11 )); then
   if [[ ! -x "${PY_ENV}/bin/python" ]]; then
-    "${PYTHON_BIN}" -m venv "${PY_ENV}"
+    if ! "${PYTHON_BIN}" -m venv "${PY_ENV}"; then
+      rm -rf "${PY_ENV}"
+      CONDA_BIN="$(command -v conda || true)"
+      if [[ -z "${CONDA_BIN}" ]]; then
+        for candidate in "/data/lf_data/miniconda3/bin/conda" "/data/miniconda3/bin/conda" "/opt/conda/bin/conda"; do
+          if [[ -x "${candidate}" ]]; then CONDA_BIN="${candidate}"; break; fi
+        done
+      fi
+      [[ -n "${CONDA_BIN}" ]] || { echo "ERROR: venv failed and conda was not found." >&2; exit 4; }
+      "${CONDA_BIN}" create -y -p "${PY_ENV}" -c conda-forge --override-channels python=3.12 pip cmake
+    fi
+  fi
+  if [[ ! -x "${PY_ENV}/bin/cmake" ]]; then
+    "${PY_ENV}/bin/pip" install cmake
   fi
 else
   CONDA_BIN="$(command -v conda || true)"
@@ -44,16 +59,30 @@ else
   fi
 fi
 
-"${PY_ENV}/bin/python" -m pip install --upgrade pip setuptools wheel
+"${PY_ENV}/bin/python" -m pip --version
 PY_MAJOR=$("${PY_ENV}/bin/python" -c 'import sys; print(sys.version_info.major)')
 PY_MINOR=$("${PY_ENV}/bin/python" -c 'import sys; print(sys.version_info.minor)')
-if (( PY_MAJOR == 3 && PY_MINOR >= 12 )); then
-  "${PY_ENV}/bin/pip" install "anndata==0.13.4" "h5py>=3.11" "scipy>=1.14" "pandas>=2.3"
-elif (( PY_MAJOR == 3 && PY_MINOR == 11 )); then
-  "${PY_ENV}/bin/pip" install "anndata>=0.12.19,<0.13" "h5py>=3.11" "scipy>=1.12" "pandas>=2.2"
+if ! "${PY_ENV}/bin/python" -c 'import anndata, h5py, scipy, pandas, pydantic; assert anndata.__version__ == "0.13.4"; assert tuple(map(int, h5py.__version__.split(".")[:2])) >= (3, 11); assert tuple(map(int, scipy.__version__.split(".")[:2])) >= (1, 14); assert tuple(map(int, pandas.__version__.split(".")[:2])) >= (2, 3); assert tuple(map(int, pydantic.__version__.split(".")[:2])) >= (2, 13)' 2>/dev/null; then
+  if [[ -d "${PY_WHEEL_DIR}" ]] && compgen -G "${PY_WHEEL_DIR}/*.whl" >/dev/null; then
+    echo "Installing Python export dependencies from local wheelhouse: ${PY_WHEEL_DIR}"
+    if (( PY_MAJOR == 3 && PY_MINOR >= 12 )); then
+      "${PY_ENV}/bin/pip" install --no-index --find-links "${PY_WHEEL_DIR}" "anndata==0.13.4" "h5py>=3.11" "scipy>=1.14" "pandas>=2.3" "pydantic>=2.13.5"
+    elif (( PY_MAJOR == 3 && PY_MINOR == 11 )); then
+      "${PY_ENV}/bin/pip" install --no-index --find-links "${PY_WHEEL_DIR}" "anndata>=0.12.19,<0.13" "h5py>=3.11" "scipy>=1.12" "pandas>=2.2"
+    else
+      echo "ERROR: isolated Python >=3.11 could not be prepared; found ${PY_MAJOR}.${PY_MINOR}" >&2
+      exit 4
+    fi
+  elif (( PY_MAJOR == 3 && PY_MINOR >= 12 )); then
+    "${PY_ENV}/bin/pip" install "anndata==0.13.4" "h5py>=3.11" "scipy>=1.14" "pandas>=2.3" "pydantic>=2.13.5"
+  elif (( PY_MAJOR == 3 && PY_MINOR == 11 )); then
+    "${PY_ENV}/bin/pip" install "anndata>=0.12.19,<0.13" "h5py>=3.11" "scipy>=1.12" "pandas>=2.2"
+  else
+    echo "ERROR: isolated Python >=3.11 could not be prepared; found ${PY_MAJOR}.${PY_MINOR}" >&2
+    exit 4
+  fi
 else
-  echo "ERROR: isolated Python >=3.11 could not be prepared; found ${PY_MAJOR}.${PY_MINOR}" >&2
-  exit 4
+  echo "Python export dependencies already satisfy the task requirements."
 fi
 echo "--- Export QS ---"
 Rscript "${ROOT}/scripts/R/task004b_export_qs.R" --project-root "${ROOT}" --lib "${R_LIB}"

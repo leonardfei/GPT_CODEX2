@@ -1,0 +1,2 @@
+status,qs_path,qs_size_bytes,qs_package_version,n_cells,n_features,n_datasets,n_samples,n_patients,duplicated_cell_ids,RNA_layers,counts_layer_class_before,counts_layer_class_after_reload
+VALIDATED,/data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas/objects/HCC_TA_8datasets_merged_review_v1.qs,4754019531,0.27.3,1490852,68394,8,194,132,0,counts,task004b_chunked_counts,task004b_chunked_counts
