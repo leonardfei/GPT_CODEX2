@@ -1,48 +1,49 @@
 # Project Status
 
 ## Current task
-Task 004b — eight-cohort unintegrated merge/export to QS + H5AD — BLOCKED
+Task 004b — resumable eight-cohort merge with native QS + H5AD export — READY TO RUN
 
-## Purpose
-At user request, create two equivalent review objects containing all eight cohorts before correcting Task 004 annotation or running Task 005 integration.
+## Revised strategy
+The previous preflight blocker has been removed from the expensive merge stage.
 
-## Target outputs
+Task 004b now separates:
+1. core merge;
+2. QS export;
+3. H5AD export.
 
-Seurat QS:
+The 1,490,852-cell merge requires only the already available core R packages (Seurat, data.table, Matrix). After merge, a temporary checkpoint RDS is written. If an export package is missing, the checkpoint is retained so that a later rerun performs export only rather than repeating the 103-object merge.
+
+## Final target outputs
+Seurat:
 `/data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas/objects/HCC_TA_8datasets_merged_review_v1.qs`
 
-AnnData H5AD:
+AnnData:
 `/data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas/objects/HCC_TA_8datasets_merged_review_v1.h5ad`
 
-Expected:
+## H5AD strategy
+Use `anndataR` + `rhdf5` directly from the merged Seurat object. No SingleCellExperiment, zellkonverter, reticulate, Python anndata or pandas environment is required.
+
+H5AD mapping:
+- AnnData X = RNA counts
+- obs = Seurat cell metadata
+- obs_names = globally unique cell IDs
+- var_names = genes/features
+- no reductions/graphs copied
+
+## Additional package needs
+- QS: qs
+- H5AD: anndataR + rhdf5
+
+If these are missing, merge still proceeds and the checkpoint is retained.
+
+## Expected data
 - 8 cohorts
-- 103 Task 004 annotated source objects
+- 103 annotated source objects
 - 1,490,852 cells
-
-No final RDS review object is required.
-
-## Export semantics
-- QS contains the full unintegrated Seurat counts+metadata review object.
-- H5AD contains the same cells/features with RNA counts in `X` and metadata in `obs`.
-- Neither output is an integrated atlas.
-- No normalization, PCA, UMAP, reclustering, RPCA/Harmony/CCA, removal or downsampling is performed.
-
-## Task 004 annotation status
-Task 004 broad annotation remains preliminary/unvalidated and is retained only so the user can inspect it.
-
-## Blocker
-Task 004b cannot start because the server-side export/validation environment is missing `qs`, `SingleCellExperiment`, `zellkonverter`, `anndata` and `pandas`. The task requires stopping before the expensive merge when these packages are unavailable; no package installation was attempted.
-
-## Pending
-1. Provide or enable the required export/validation environment
-2. Execute Task 004b
-3. Validate QS by reload and H5AD with backed AnnData
-4. User manually reviews annotation
-5. Rebuild/correct annotation as needed
-6. Run Task 005 integration only after annotation review
+- Task 004 labels retained as preliminary/unvalidated
 
 ## Next execution command
-After the environment blocker is resolved: `Execute task_004b.`
+`Execute task_004b.`
 
 ## Last update
-2026-09-26 — Task 004b preflight blocked before merge/export; see `reports/task_004b_merge_review_report.md`.
+2026-09-26 — export architecture revised to resumable merge + native anndataR H5AD.

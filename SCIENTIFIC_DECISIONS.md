@@ -78,6 +78,14 @@ Targets:
 
 The QS and H5AD must contain the same 1,490,852 cells and equivalent core metadata. The H5AD uses RNA counts as AnnData X. No final RDS review object is required.
 
+Export architecture is resumable:
+- the expensive merge uses only Seurat/data.table/Matrix;
+- a temporary RDS checkpoint is written after merge;
+- QS export uses qs;
+- H5AD export uses anndataR + rhdf5 natively from the Seurat object;
+- SingleCellExperiment/zellkonverter/Python are not required;
+- the checkpoint is deleted only after both requested outputs validate.
+
 These objects must not be described as an integrated atlas.
 
 ## Decision log

@@ -31,6 +31,11 @@ cohort_root <- arg_value(
   "cohort-root",
   file.path(project_root, "objects", "task004_merge_review", "cohort_merged")
 )
+checkpoint_path <- arg_value(
+  "checkpoint",
+  file.path(project_root, "objects", "task004_merge_review", "checkpoint",
+            "HCC_TA_8datasets_merged_review_v1_checkpoint.rds")
+)
 results_root <- arg_value("results-root", file.path(project_root, "results"))
 report_path <- arg_value(
   "report",
@@ -40,25 +45,16 @@ report_path <- arg_value(
 dir.create(dirname(qs_path), recursive = TRUE, showWarnings = FALSE)
 dir.create(dirname(h5ad_path), recursive = TRUE, showWarnings = FALSE)
 dir.create(cohort_root, recursive = TRUE, showWarnings = FALSE)
+dir.create(dirname(checkpoint_path), recursive = TRUE, showWarnings = FALSE)
 dir.create(results_root, recursive = TRUE, showWarnings = FALSE)
 dir.create(dirname(report_path), recursive = TRUE, showWarnings = FALSE)
-
-required_export_packages <- c("qs", "SingleCellExperiment", "zellkonverter")
-missing_export_packages <- required_export_packages[
-  !vapply(required_export_packages, requireNamespace, logical(1), quietly = TRUE)
-]
-if (length(missing_export_packages)) {
-  stop(
-    "Missing required export package(s): ",
-    paste(missing_export_packages, collapse = ", "),
-    ". Task 004b must stop before the expensive merge so the environment can be fixed explicitly."
-  )
-}
 
 expected_datasets <- c(
   "GSE282701", "GSE242889", "GSE326201", "GSE149614", "GSE299340",
   "CRA002308", "nature_xue", "in_house"
 )
+
+resume_from_checkpoint <- file.exists(checkpoint_path)
 
 manifest <- fread(validation_csv)
 required_cols <- c("dataset", "output_path", "annotated_object_cells")
@@ -156,6 +152,11 @@ merge_two <- function(x, y) {
   merge(x = x, y = y, merge.data = FALSE, merge.dr = FALSE)
 }
 
+if (resume_from_checkpoint) {
+  message("Existing merge checkpoint detected; skipping 103-object merge: ", checkpoint_path)
+  merged <- readRDS(checkpoint_path)
+  if (!inherits(merged, "Seurat")) stop("Checkpoint is not a Seurat object")
+} else {
 cohort_rows <- list()
 
 for (dataset in expected_datasets) {
@@ -223,6 +224,17 @@ if (anyDuplicated(colnames(merged))) {
 if (!setequal(unique(as.character(merged$dataset)), expected_datasets)) {
   stop("Final merged object dataset metadata mismatch")
 }
+} # end fresh merge path
+
+if (ncol(merged) != expected_total) {
+  stop("Merged/checkpoint object cell count mismatch: ", ncol(merged), " vs ", expected_total)
+}
+if (anyDuplicated(colnames(merged))) {
+  stop("Merged/checkpoint object has duplicate cell IDs")
+}
+if (!setequal(unique(as.character(merged$dataset)), expected_datasets)) {
+  stop("Merged/checkpoint object dataset metadata mismatch")
+}
 
 rna_layers_final <- Layers(merged[["RNA"]])
 if (!identical(rna_layers_final, "counts")) {
@@ -247,46 +259,74 @@ merged@misc$merge_review <- list(
   datasets = expected_datasets
 )
 
-if (!requireNamespace("qs", quietly = TRUE)) {
-  stop("Package 'qs' is required to write the requested .qs Seurat object.")
+if (!resume_from_checkpoint) {
+  message("Writing recoverable merge checkpoint: ", checkpoint_path)
+  saveRDS(merged, checkpoint_path, compress = "gzip")
 }
-message("Writing Seurat QS object: ", qs_path)
-qs::qsave(merged, qs_path, preset = "high")
 
-message("Reload-validating QS object...")
-qs_check <- qs::qread(qs_path)
-if (!inherits(qs_check, "Seurat")) stop("QS validation failed: object is not Seurat")
-if (ncol(qs_check) != expected_total) stop("QS validation failed: cell count mismatch")
-if (!identical(colnames(qs_check), colnames(merged))) stop("QS validation failed: ordered cell IDs changed")
-rm(qs_check)
-gc(verbose = FALSE)
+qs_status <- "NOT_ATTEMPTED"
+h5ad_status <- "NOT_ATTEMPTED"
 
-message("Preparing AnnData export...")
-if (!requireNamespace("SingleCellExperiment", quietly = TRUE) ||
-    !requireNamespace("zellkonverter", quietly = TRUE)) {
-  stop(
-    "Packages 'SingleCellExperiment' and 'zellkonverter' are required for the requested .h5ad export. ",
-    "Do not install from the server unless package connectivity is explicitly available."
+if (requireNamespace("qs", quietly = TRUE)) {
+  message("Writing Seurat QS object: ", qs_path)
+  qs::qsave(merged, qs_path, preset = "high")
+  message("Reload-validating QS object...")
+  qs_check <- qs::qread(qs_path)
+  if (!inherits(qs_check, "Seurat")) stop("QS validation failed: object is not Seurat")
+  if (ncol(qs_check) != expected_total) stop("QS validation failed: cell count mismatch")
+  if (!identical(colnames(qs_check), colnames(merged))) {
+    stop("QS validation failed: ordered cell IDs changed")
+  }
+  qs_status <- "VALIDATED"
+  rm(qs_check)
+  gc(verbose = FALSE)
+} else {
+  qs_status <- "BLOCKED_MISSING_qs"
+  warning("QS export skipped: R package 'qs' is not installed. Merge checkpoint retained.")
+}
+
+if (requireNamespace("anndataR", quietly = TRUE) &&
+    requireNamespace("rhdf5", quietly = TRUE)) {
+  message("Writing AnnData H5AD natively from Seurat with anndataR: ", h5ad_path)
+  anndataR::write_h5ad(
+    merged,
+    path = h5ad_path,
+    compression = "gzip",
+    assay_name = "RNA",
+    x_mapping = "counts",
+    layers_mapping = FALSE,
+    obs_mapping = TRUE,
+    var_mapping = FALSE,
+    obsm_mapping = FALSE,
+    varm_mapping = FALSE,
+    obsp_mapping = FALSE,
+    varp_mapping = FALSE,
+    uns_mapping = FALSE
+  )
+
+  message("Backed-validating H5AD with anndataR...")
+  ad_check <- anndataR::read_h5ad(h5ad_path, as = "HDF5AnnData", mode = "r")
+  ad_dims <- dim(ad_check)
+  if (length(ad_dims) != 2L) stop("H5AD validation failed: could not determine dimensions")
+  if (as.integer(ad_dims[[1L]]) != expected_total) {
+    stop("H5AD validation failed: observation count mismatch")
+  }
+  if (as.integer(ad_dims[[2L]]) != nrow(merged)) {
+    stop("H5AD validation failed: feature count mismatch")
+  }
+  h5ad_status <- "VALIDATED"
+  rm(ad_check)
+  gc(verbose = FALSE)
+} else {
+  miss <- c()
+  if (!requireNamespace("anndataR", quietly = TRUE)) miss <- c(miss, "anndataR")
+  if (!requireNamespace("rhdf5", quietly = TRUE)) miss <- c(miss, "rhdf5")
+  h5ad_status <- paste0("BLOCKED_MISSING_", paste(miss, collapse = "+"))
+  warning(
+    "H5AD export skipped; missing R package(s): ", paste(miss, collapse = ", "),
+    ". Merge checkpoint retained."
   )
 }
-
-# The review object intentionally contains counts only. Export those counts as AnnData X.
-sce <- SingleCellExperiment::SingleCellExperiment(
-  assays = list(counts = get_counts(merged)),
-  colData = S4Vectors::DataFrame(merged[[]])
-)
-rownames(sce) <- rownames(merged)
-colnames(sce) <- colnames(merged)
-
-message("Writing AnnData H5AD object: ", h5ad_path)
-zellkonverter::writeH5AD(
-  sce,
-  file = h5ad_path,
-  X_name = "counts",
-  compression = "gzip"
-)
-rm(sce)
-gc(verbose = FALSE)
 
 meta <- merged[[]]
 dataset_summary <- as.data.table(meta)[, .(
@@ -308,8 +348,12 @@ rna_layers <- Layers(merged[["RNA"]])
 validation <- data.table(
   qs_object_path = qs_path,
   h5ad_object_path = h5ad_path,
-  qs_size_bytes = file.info(qs_path)$size,
-  h5ad_size_bytes = file.info(h5ad_path)$size,
+  checkpoint_path = checkpoint_path,
+  checkpoint_size_bytes = file.info(checkpoint_path)$size,
+  qs_status = qs_status,
+  h5ad_status = h5ad_status,
+  qs_size_bytes = if (file.exists(qs_path)) file.info(qs_path)$size else NA_real_,
+  h5ad_size_bytes = if (file.exists(h5ad_path)) file.info(h5ad_path)$size else NA_real_,
   n_cells = ncol(merged),
   n_features = nrow(merged),
   n_datasets = uniqueN(meta$dataset),
@@ -325,14 +369,14 @@ validation <- data.table(
 )
 fwrite(validation, file.path(results_root, "task004b_merge_review_validation.csv"))
 
-sha_qs <- tryCatch(
+sha_qs <- if (file.exists(qs_path)) tryCatch(
   system2("sha256sum", qs_path, stdout = TRUE, stderr = TRUE),
   error = function(e) paste("sha256sum unavailable:", conditionMessage(e))
-)
-sha_h5ad <- tryCatch(
+) else "NOT_CREATED"
+sha_h5ad <- if (file.exists(h5ad_path)) tryCatch(
   system2("sha256sum", h5ad_path, stdout = TRUE, stderr = TRUE),
   error = function(e) paste("sha256sum unavailable:", conditionMessage(e))
-)
+) else "NOT_CREATED"
 
 report <- c(
   "# Task 004b report — eight-cohort unintegrated Seurat merge for annotation review",
@@ -360,9 +404,13 @@ report <- c(
   paste0("Seurat QS object: ", qs_path),
   paste0("AnnData H5AD object: ", h5ad_path),
   paste0("QS SHA256: ", paste(sha_qs, collapse = " ")),
+  paste0("QS status: ", qs_status),
+  paste0("H5AD status: ", h5ad_status),
+  paste0("QS SHA256: ", paste(sha_qs, collapse = " ")),
   paste0("H5AD SHA256: ", paste(sha_h5ad, collapse = " ")),
+  paste0("Recoverable merge checkpoint: ", checkpoint_path),
   "",
-  "The H5AD stores RNA counts in AnnData X and cell metadata in obs.",
+  "The H5AD is written natively from the Seurat object using anndataR, with RNA counts in AnnData X and cell metadata in obs.",
   "",
   "## Important limitation",
   "",
@@ -371,6 +419,13 @@ report <- c(
 )
 writeLines(report, report_path)
 
-message("DONE QS: ", qs_path)
-message("DONE H5AD: ", h5ad_path)
+if (identical(qs_status, "VALIDATED") && identical(h5ad_status, "VALIDATED")) {
+  message("Both requested exports validated; removing temporary checkpoint.")
+  unlink(checkpoint_path)
+  message("DONE QS: ", qs_path)
+  message("DONE H5AD: ", h5ad_path)
+} else {
+  message("Merge completed but one or more format exports are blocked.")
+  message("Checkpoint retained for export-only resume: ", checkpoint_path)
+}
 message("Cells: ", ncol(merged), "; features: ", nrow(merged))
