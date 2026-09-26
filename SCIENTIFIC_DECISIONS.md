@@ -84,7 +84,9 @@ Export architecture is resumable:
 - QS export uses qs;
 - H5AD export uses anndataR + rhdf5 natively from the Seurat object;
 - SingleCellExperiment/zellkonverter/Python are not required;
-- the checkpoint is deleted only after both requested outputs validate.
+- the checkpoint is deleted only after both requested outputs validate;
+- final merge success is evaluated independently from export-package availability;
+- a validated merge with blocked format export is recorded as MERGE_COMPLETED_EXPORT_PARTIAL, not as a failed merge.
 
 These objects must not be described as an integrated atlas.
 

@@ -287,6 +287,29 @@ if (!setequal(unique(as.character(merged$dataset)), expected_datasets)) {
   stop("Merged/checkpoint object dataset metadata mismatch")
 }
 
+meta_preexport <- merged[[]]
+if (data.table::uniqueN(meta_preexport$dataset) != 8L) {
+  stop("Final merge validation failed: expected 8 datasets")
+}
+if (data.table::uniqueN(meta_preexport$sample_id) != 194L) {
+  stop(
+    "Final merge validation failed: expected 194 sample IDs, found ",
+    data.table::uniqueN(meta_preexport$sample_id)
+  )
+}
+if (data.table::uniqueN(meta_preexport$patient_id) != 132L) {
+  stop(
+    "Final merge validation failed: expected 132 patient IDs, found ",
+    data.table::uniqueN(meta_preexport$patient_id)
+  )
+}
+if (sum(meta_preexport$tissue == "Tumor", na.rm = TRUE) != 1039293L) {
+  stop("Final merge validation failed: Tumor cell count mismatch")
+}
+if (sum(meta_preexport$tissue == "Adjacent", na.rm = TRUE) != 451559L) {
+  stop("Final merge validation failed: Adjacent cell count mismatch")
+}
+
 rna_layers_final <- Layers(merged[["RNA"]])
 if (!identical(rna_layers_final, "counts")) {
   count_layers_final <- rna_layers_final[grepl("^counts", rna_layers_final)]
@@ -311,6 +334,7 @@ if (!identical(rna_layers_final, "counts")) {
   }
 }
 
+merge_validation_status <- "VALIDATED"
 merged@misc$merge_review <- list(
   task = "task_004b",
   purpose = "Eight-cohort unintegrated merge for manual annotation review",
@@ -397,6 +421,18 @@ if (requireNamespace("anndataR", quietly = TRUE) &&
   )
 }
 
+task004b_status <- if (
+  identical(merge_validation_status, "VALIDATED") &&
+  identical(qs_status, "VALIDATED") &&
+  identical(h5ad_status, "VALIDATED")
+) {
+  "COMPLETED"
+} else if (identical(merge_validation_status, "VALIDATED")) {
+  "MERGE_COMPLETED_EXPORT_PARTIAL"
+} else {
+  "FAILED"
+}
+
 meta <- merged[[]]
 dataset_summary <- as.data.table(meta)[, .(
   n_cells = .N,
@@ -415,10 +451,12 @@ fwrite(metadata_fields, file.path(results_root, "task004b_merge_review_metadata_
 
 rna_layers <- Layers(merged[["RNA"]])
 validation <- data.table(
+  task004b_status = task004b_status,
+  merge_validation_status = merge_validation_status,
   qs_object_path = qs_path,
   h5ad_object_path = h5ad_path,
   checkpoint_path = checkpoint_path,
-  checkpoint_size_bytes = file.info(checkpoint_path)$size,
+  checkpoint_size_bytes = if (file.exists(checkpoint_path)) file.info(checkpoint_path)$size else NA_real_,
   qs_status = qs_status,
   h5ad_status = h5ad_status,
   qs_size_bytes = if (file.exists(qs_path)) file.info(qs_path)$size else NA_real_,
@@ -450,6 +488,13 @@ sha_h5ad <- if (file.exists(h5ad_path)) tryCatch(
 report <- c(
   "# Task 004b report — eight-cohort unintegrated Seurat merge for annotation review",
   "",
+  "## Status",
+  "",
+  paste0("Task 004b status: ", task004b_status),
+  paste0("Final merge validation: ", merge_validation_status),
+  paste0("QS export: ", qs_status),
+  paste0("H5AD export: ", h5ad_status),
+  "",
   "## Purpose",
   "",
   "This object was created for manual inspection of the current Task 004 annotations. No RPCA/Harmony integration, batch correction, normalization, PCA, UMAP, or reclustering was performed.",
@@ -459,6 +504,11 @@ report <- c(
   "- 103 Task 004 annotated Seurat objects",
   "- 8 cohorts",
   paste0("- Total cells: ", format(ncol(merged), big.mark = ",")),
+  "- Samples: 194",
+  "- Patients: 132",
+  "- Explicit paired Tumor-Adjacent patients: 59 (metadata design reference)",
+  "- Tumor cells: 1,039,293",
+  "- Adjacent cells: 451,559",
   "",
   "## Merge content",
   "",
@@ -487,13 +537,13 @@ report <- c(
 )
 writeLines(report, report_path)
 
-if (identical(qs_status, "VALIDATED") && identical(h5ad_status, "VALIDATED")) {
-  message("Both requested exports validated; removing temporary checkpoint.")
+if (identical(task004b_status, "COMPLETED")) {
+  message("Task 004b COMPLETED: both requested exports validated; removing temporary checkpoint.")
   unlink(checkpoint_path)
   message("DONE QS: ", qs_path)
   message("DONE H5AD: ", h5ad_path)
 } else {
-  message("Merge completed but one or more format exports are blocked.")
+  message("Task 004b PARTIAL: final merge validated but one or more format exports are blocked.")
   message("Checkpoint retained for export-only resume: ", checkpoint_path)
 }
 message("Cells: ", ncol(merged), "; features: ", nrow(merged))

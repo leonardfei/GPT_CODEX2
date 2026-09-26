@@ -1,17 +1,36 @@
 # Project Status
 
 ## Current task
-Task 004b — resumable eight-cohort merge with native QS + H5AD export — READY TO RUN
+Task 004b — final eight-cohort merge and QS/H5AD export — READY TO EXECUTE
 
-## Revised strategy
-The previous preflight blocker has been removed from the expensive merge stage.
+## Current completion state
+Approximately 80% complete.
 
-Task 004b now separates:
-1. core merge;
-2. QS export;
-3. H5AD export.
+Completed:
+- 8 cohort intermediate RDS objects have already been generated;
+- these represent 103 Task 004 source objects;
+- expected retained total: 1,490,852 cells;
+- source objects remain unchanged;
+- resumable merge logic is implemented.
 
-The 1,490,852-cell merge requires only the already available core R packages (Seurat, data.table, Matrix). After merge, a temporary checkpoint RDS is written. If an export package is missing, the checkpoint is retained so that a later rerun performs export only rather than repeating the 103-object merge.
+Pending:
+1. reuse and validate the 8 cohort intermediate objects;
+2. perform final eight-cohort merge;
+3. join any `counts.*` layers to one final RNA `counts` layer;
+4. validate final merged object;
+5. write recoverable final checkpoint;
+6. export/validate QS if `qs` is available;
+7. export/validate H5AD if `anndataR + rhdf5` are available.
+
+## Mandatory final-merge invariants
+- 1,490,852 cells
+- 8 datasets
+- 194 samples
+- 132 patients
+- 1,039,293 Tumor cells
+- 451,559 Adjacent cells
+- 0 duplicated cell IDs
+- exactly one final RNA layer: `counts`
 
 ## Final target outputs
 Seurat:
@@ -20,30 +39,22 @@ Seurat:
 AnnData:
 `/data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas/objects/HCC_TA_8datasets_merged_review_v1.h5ad`
 
-## H5AD strategy
-Use `anndataR` + `rhdf5` directly from the merged Seurat object. No SingleCellExperiment, zellkonverter, reticulate, Python anndata or pandas environment is required.
+Recoverable checkpoint:
+`/data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas/objects/task004_merge_review/checkpoint/HCC_TA_8datasets_merged_review_v1_checkpoint.rds`
 
-H5AD mapping:
-- AnnData X = RNA counts
-- obs = Seurat cell metadata
-- obs_names = globally unique cell IDs
-- var_names = genes/features
-- no reductions/graphs copied
+## Export dependencies
+- QS: `qs`
+- H5AD: `anndataR` + `rhdf5`
 
-## Additional package needs
-- QS: qs
-- H5AD: anndataR + rhdf5
+Missing export dependencies must not block or invalidate the final merge. If they are absent, finish Phase A, retain the checkpoint and report `MERGE_COMPLETED_EXPORT_PARTIAL`.
 
-If these are missing, merge still proceeds and the checkpoint is retained. A rerun automatically detects the checkpoint and skips the expensive 103-object merge. The checkpoint is removed only after both QS and H5AD validate successfully.
+## Completion rule
+Task 004b is `COMPLETED` only if final merge + QS validation + H5AD validation all pass.
 
-## Expected data
-- 8 cohorts
-- 103 annotated source objects
-- 1,490,852 cells
-- Task 004 labels retained as preliminary/unvalidated
+Task 005 remains paused.
 
 ## Next execution command
 `Execute task_004b.`
 
 ## Last update
-2026-09-26 — export architecture revised to resumable merge + native anndataR H5AD.
+2026-09-26 — Task 004b rewritten for direct execution from the existing 8 cohort intermediates.

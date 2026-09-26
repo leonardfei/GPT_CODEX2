@@ -1,110 +1,164 @@
-# Task 004b — Best-practice eight-cohort merge and QS/H5AD export
+# Task 004b — Final eight-cohort merge and QS/H5AD export
 
 ## Status
-READY TO RUN / RESUMABLE
+READY TO EXECUTE — cohort-level merge already available; final merge/export pending.
+
+## Current server state
+Already completed:
+- 8 cohort intermediate RDS objects exist under `objects/task004_merge_review/cohort_merged/`;
+- the 8 cohorts collectively represent 103 Task 004 source objects;
+- expected retained cell total is 1,490,852;
+- source Task 004 objects must not be modified.
+
+Do not rebuild the 103 source objects unless an existing cohort checkpoint fails structural validation.
 
 ## Goal
-Create two equivalent unintegrated review objects containing all eight cohorts:
-1. Seurat `.qs`;
-2. AnnData `.h5ad`.
+Produce one validated unintegrated review object in two formats:
+1. Seurat QS:
+   `objects/HCC_TA_8datasets_merged_review_v1.qs`
+2. AnnData H5AD:
+   `objects/HCC_TA_8datasets_merged_review_v1.h5ad`
 
-## Engineering strategy
+This task is still pre-integration. Do not execute Task 005.
 
-The expensive 1,490,852-cell merge is decoupled from format export.
+## Phase A — final merge (mandatory)
+Use the 8 existing cohort intermediate RDS files first.
 
-### Phase A — merge, always possible with current core R environment
-Requirements:
-- Seurat
-- data.table
-- Matrix
+For every cohort checkpoint:
+- verify it is a Seurat object;
+- verify expected dataset identity and expected cell count;
+- verify globally unique cell IDs within the cohort;
+- retain RNA counts and metadata;
+- if multiple `counts.*` layers exist, join only count layers and rebuild a clean counts-only Seurat object;
+- do not retain PCA/UMAP/graphs.
 
-Actions:
-- read the 103 Task 004 annotated objects;
-- rebuild each as a counts+metadata review object;
-- merge to 8 cohorts and then one 1,490,852-cell Seurat object;
-- preserve RNA raw counts and metadata;
-- discard source-specific reductions/graphs;
-- write a recoverable checkpoint:
+Merge the 8 validated cohort objects.
+
+The final object must satisfy all of the following before any format export is considered:
+- exactly 1,490,852 cells;
+- exactly 8 datasets;
+- exactly 194 sample IDs;
+- exactly 132 patient IDs;
+- 1,039,293 Tumor cells;
+- 451,559 Adjacent cells;
+- zero duplicated cell IDs;
+- RNA assay exists;
+- final RNA assay contains exactly one layer named `counts`;
+- `project_broad_celltype`, `neutrophil_confidence`, `source_author_annotation`, dataset/sample/patient/tissue and QC provenance metadata remain present;
+- Task 004 labels remain marked `annotation_status=preliminary_unvalidated_task004`.
+
+After validation, write the recoverable final merge checkpoint:
 
 `objects/task004_merge_review/checkpoint/HCC_TA_8datasets_merged_review_v1_checkpoint.rds`
 
-If this checkpoint already exists and validates, subsequent runs skip the expensive 103-object merge and perform export only.
+Use `compress=FALSE` for this temporary checkpoint to avoid avoidable serialization memory peaks.
 
-### Phase B — QS export
-Requires only:
-- `qs`
+If this checkpoint already exists on rerun and validates, skip cohort/final merge and go directly to export.
 
-Output:
-`objects/HCC_TA_8datasets_merged_review_v1.qs`
+## Phase B — QS export
+If R package `qs` is available:
+- export the checkpoint/final merged Seurat object to:
+  `objects/HCC_TA_8datasets_merged_review_v1.qs`
+- reload using `qs::qread()`;
+- require Seurat class;
+- require exactly 1,490,852 cells;
+- require ordered cell IDs identical to the merged object.
 
-Reload with `qs::qread()` and verify class, dimensions and ordered cell IDs.
+If `qs` is unavailable:
+- do not fail Phase A;
+- record `QS status = BLOCKED_MISSING_qs`;
+- retain the final merge checkpoint.
 
-### Phase C — H5AD export
-Use native R AnnData interoperability:
+## Phase C — H5AD export
+Preferred native R route:
 - `anndataR`
 - `rhdf5`
 
-Do **not** use SingleCellExperiment, zellkonverter, reticulate, or a Python export environment.
+Use `anndataR::write_h5ad()` directly from the Seurat object:
+- `assay_name="RNA"`;
+- `x_mapping="counts"`;
+- `layers_mapping=FALSE`;
+- `obs_mapping=TRUE`;
+- do not copy reductions, graphs or misc;
+- gzip compression.
 
-`anndataR::write_h5ad()` writes directly from the merged Seurat object with:
-- assay_name = RNA
-- x_mapping = counts
-- layers_mapping = FALSE
-- obs_mapping = TRUE
-- reductions/graphs/misc excluded
-- gzip compression
+Expected AnnData structure:
+- `X` = RNA raw counts;
+- `obs` = cell metadata;
+- `obs_names` = globally unique cell IDs;
+- `var_names` = gene/features.
 
-Output:
-`objects/HCC_TA_8datasets_merged_review_v1.h5ad`
+Validate with:
+`anndataR::read_h5ad(path, as="HDF5AnnData", mode="r")`
 
-Validate by reopening as an `HDF5AnnData` object using `anndataR::read_h5ad(..., as="HDF5AnnData")` and checking observations/features.
+Require:
+- 1,490,852 observations;
+- feature count equal to the Seurat/QS object.
 
-After both QS and H5AD validate, delete the temporary checkpoint. If either export dependency is missing, retain the checkpoint and report a partial/blocker state; do not redo the merge after packages become available.
+If `anndataR` or `rhdf5` is unavailable:
+- do not fail Phase A;
+- record the missing dependency;
+- retain the final merge checkpoint.
 
-## Biological/data rules
-No RPCA/Harmony/CCA, normalization, PCA, UMAP, reclustering, annotation change, cell removal or downsampling.
+## Important metadata correction
+In the review object only:
+- CRA002308 and in_house: `rescued_by_corrected_qc=FALSE`, `qc_status=corrected_qc_pass`;
+- nature_xue: `rescued_by_corrected_qc=FALSE`, `qc_status=author_processed`;
+- preserve pre-correction Task 004 values in `task004_qc_status_premerge` and `task004_rescued_premerge`.
 
-Keep:
-- 1,490,852 cells;
-- all 8 datasets;
-- RNA raw counts;
-- harmonized metadata;
-- preliminary Task 004 labels for inspection;
-- nature_xue source author annotation.
+Do not otherwise change cell annotations or cell inclusion.
 
-Known rescued-status metadata correction:
-- CRA002308/in_house: rescued_by_corrected_qc=FALSE; qc_status=corrected_qc_pass
-- nature_xue: rescued_by_corrected_qc=FALSE; qc_status=author_processed
-- preserve premerge values for audit.
+## Status definitions
+### COMPLETED
+Only when:
+- final merge validation passes;
+- QS is written and reload-validates;
+- H5AD is written and backed-validates.
 
-## Dependencies
-Core merge:
-- Seurat
-- data.table
-- Matrix
+Then the temporary final checkpoint may be removed.
 
-Final exports:
-- QS: `qs`
-- H5AD: `anndataR` + `rhdf5`
+### MERGE_COMPLETED_EXPORT_PARTIAL
+When:
+- final 1,490,852-cell merge validation passes;
+- checkpoint is successfully written;
+- one or both requested export formats are blocked by missing packages.
 
-These are the only additional format dependencies.
+In this state, retain the checkpoint. A later rerun must skip the expensive merge and perform export only.
 
-If additional packages are unavailable, do not silently install them. The merge checkpoint allows export-only continuation later.
+### FAILED
+Any failure in final merge integrity, cell counts, dataset/sample/patient counts, cell ID uniqueness, metadata integrity, or counts-layer integrity.
 
-## Primary outputs
-- `objects/HCC_TA_8datasets_merged_review_v1.qs`
-- `objects/HCC_TA_8datasets_merged_review_v1.h5ad`
+Do not continue to Task 005.
 
-## Validation outputs
+## Required tracked outputs
 - `results/task004b_merge_review_cohort_summary.csv`
 - `results/task004b_merge_review_dataset_summary.csv`
 - `results/task004b_merge_review_metadata_fields.csv`
 - `results/task004b_merge_review_validation.csv`
 - `reports/task_004b_merge_review_report.md`
 
-Python validation is no longer required.
+The validation CSV must include:
+- `task004b_status`;
+- `merge_validation_status`;
+- QS/H5AD statuses and file sizes;
+- cells/features/datasets/samples/patients;
+- duplicate cell count;
+- RNA layers;
+- annotation/provenance field checks.
 
 ## Execution
-`Rscript scripts/R/task004b_merge_review.R --project-root /data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas`
+From the project root:
 
-Stop after both exports validate or after a partial export state with checkpoint retained. Do not execute Task 005.
+```bash
+cd /data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas
+
+Rscript scripts/R/task004b_merge_review.R \
+  --project-root /data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas
+```
+
+## Stop rule
+Stop after Task 004b reaches either:
+- `COMPLETED`, or
+- `MERGE_COMPLETED_EXPORT_PARTIAL`.
+
+Do not execute Task 005.
