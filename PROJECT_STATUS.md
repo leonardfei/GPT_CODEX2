@@ -1,7 +1,7 @@
 # Project Status
 
 ## Current task
-Task 004b — eight-cohort unintegrated merge/export to QS + H5AD — READY TO RUN
+Task 004b — eight-cohort unintegrated merge/export to QS + H5AD — BLOCKED
 
 ## Purpose
 At user request, create two equivalent review objects containing all eight cohorts before correcting Task 004 annotation or running Task 005 integration.
@@ -30,15 +30,19 @@ No final RDS review object is required.
 ## Task 004 annotation status
 Task 004 broad annotation remains preliminary/unvalidated and is retained only so the user can inspect it.
 
+## Blocker
+Task 004b cannot start because the server-side export/validation environment is missing `qs`, `SingleCellExperiment`, `zellkonverter`, `anndata` and `pandas`. The task requires stopping before the expensive merge when these packages are unavailable; no package installation was attempted.
+
 ## Pending
-1. Execute Task 004b
-2. Validate QS by reload and H5AD with backed AnnData
-3. User manually reviews annotation
-4. Rebuild/correct annotation as needed
-5. Run Task 005 integration only after annotation review
+1. Provide or enable the required export/validation environment
+2. Execute Task 004b
+3. Validate QS by reload and H5AD with backed AnnData
+4. User manually reviews annotation
+5. Rebuild/correct annotation as needed
+6. Run Task 005 integration only after annotation review
 
 ## Next execution command
-`Execute task_004b.`
+After the environment blocker is resolved: `Execute task_004b.`
 
 ## Last update
-2026-09-25
+2026-09-26 — Task 004b preflight blocked before merge/export; see `reports/task_004b_merge_review_report.md`.
