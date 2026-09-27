@@ -1,7 +1,7 @@
 # Task 005 — Eight-cohort Seurat v5 integration
 
 ## Status
-PENDING
+PENDING — BLOCKED UNTIL TASK 004c FEATURE HARMONISATION IS REVIEWED
 
 ## Goal
 Integrate all cohorts approved after Tasks 003–004 into one traceable HCC Tumor–Adjacent atlas while preserving raw/source expression, biological provenance and abundance-eligibility metadata.
@@ -17,6 +17,14 @@ Integrate all cohorts approved after Tasks 003–004 into one traceable HCC Tumo
 - in_house
 
 If Task 003 or Task 004 marks a cohort technically incompatible or blocked, do not silently omit it. Record the blocker and stop for review.
+
+## Feature harmonisation prerequisite
+Use the Task 004c HGNC-harmonised cohort objects, not the 68,394-feature raw union object, for cross-cohort normalization/HVG/integration.
+
+Candidate integration feature universe:
+results/task004c_shared_hgnc_features_8of8.txt
+
+Select highly variable/integration features from this shared HGNC universe. Preserve the original source/raw objects separately for cohort-specific, viral/custom-feature and audit analyses.
 
 ## Default approach
 Use Seurat v5 RPCA integration as the default, with parameters chosen after inspecting object sizes, shared features and normalization state.
