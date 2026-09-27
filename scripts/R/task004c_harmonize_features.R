@@ -25,7 +25,11 @@ source_qs <- arg_value(
 )
 out_qs <- arg_value(
   "out-qs",
-  file.path(project_root, "objects", "HCC_TA_8datasets_merged_review_HGNC_v1.qs")
+  file.path(project_root, "objects", "HCC_TA_8datasets_merged_review_v1.qs.task004c_tmp")
+)
+final_qs <- arg_value(
+  "final-qs",
+  file.path(project_root, "objects", "HCC_TA_8datasets_merged_review_v1.qs")
 )
 cohort_summary_path <- arg_value(
   "cohort-summary",
@@ -286,7 +290,7 @@ obj@misc$feature_harmonisation <- list(
   reference_retrieved_date = format(Sys.Date(), "%Y-%m-%d"),
   mapping_rule = "approved symbol > version-stripped Ensembl > Entrez > unique previous symbol > unique alias",
   duplicate_rule = "raw counts summed for source features mapping to the same HGNC-approved symbol",
-  unmapped_rule = "excluded from HGNC v1 analysis object; preserved in merged_review_v1",
+  unmapped_rule = "excluded from the overwritten merged analysis object; recoverable only from upstream cohort/source objects or retained Task 004b checkpoint",
   old_total_counts = old_total_counts,
   hgnc_total_counts = new_total_counts,
   count_retention_fraction = new_total_counts / old_total_counts
@@ -360,7 +364,8 @@ if (!inherits(chk[["RNA"]]@layers[["counts"]], "task004b_chunked_counts")) stop(
 validation <- data.table(
   status = "VALIDATED",
   source_qs = source_qs,
-  harmonised_qs = out_qs,
+  harmonised_qs_temp = out_qs,
+  harmonised_qs_final = final_qs,
   qs_size_bytes = file.info(out_qs)$size,
   n_cells = ncol(chk),
   source_features = length(old_features),
