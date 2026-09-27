@@ -357,11 +357,23 @@ for (dataset_name in expected_datasets) {
   )
 
   out_path <- file.path(object_dir, paste0(dataset_name, "_HGNC_harmonized.qs"))
-  nthreads <- max(1L, min(8L, parallel::detectCores()))
+  detected_cores <- parallel::detectCores()
+  if (is.na(detected_cores) || detected_cores < 1L) detected_cores <- 1L
+  nthreads <- max(1L, min(8L, detected_cores))
+  expected_cells <- ncol(hobj)
+  expected_features <- nrow(hobj)
   qs::qsave(hobj, out_path, preset = "high", check_hash = TRUE, nthreads = nthreads)
+
+  # Free the source and newly materialised matrices before reload validation.
+  # This is important for nature_xue and avoids holding two full Seurat objects
+  # plus the validation copy in RAM at the same time.
+  rm(obj, counts, md, hcounts, hobj)
+  gc(verbose = FALSE)
+
   chk <- qs::qread(out_path, use_alt_rep = FALSE, nthreads = nthreads)
   if (!inherits(chk, "Seurat")) stop("Reload failed for ", dataset_name)
-  if (ncol(chk) != ncol(obj)) stop("Cell count changed after harmonisation: ", dataset_name)
+  if (ncol(chk) != expected_cells) stop("Cell count changed after harmonisation: ", dataset_name)
+  if (nrow(chk) != expected_features) stop("Feature count changed after harmonisation: ", dataset_name)
   if (anyDuplicated(rownames(chk))) stop("Duplicate harmonised features after reload: ", dataset_name)
   if (!all(rownames(chk) %in% hgnc$symbol)) stop("Non-HGNC feature found in harmonised object: ", dataset_name)
 
@@ -375,7 +387,7 @@ for (dataset_name in expected_datasets) {
     validation = "VALIDATED"
   )
 
-  rm(obj, counts, md, hcounts, hobj, chk, mp)
+  rm(chk, mp)
   gc(verbose = FALSE)
 }
 
