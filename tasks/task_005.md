@@ -19,12 +19,18 @@ Integrate all cohorts approved after Tasks 003–004 into one traceable HCC Tumo
 If Task 003 or Task 004 marks a cohort technically incompatible or blocked, do not silently omit it. Record the blocker and stop for review.
 
 ## Feature harmonisation prerequisite
-Use the Task 004c HGNC-harmonised cohort objects, not the 68,394-feature raw union object, for cross-cohort normalization/HVG/integration.
+Use the validated merged HGNC object from Task 004c, not the 68,394-feature raw-union object, for cross-cohort normalization/HVG/integration.
+
+Primary analysis objects:
+- objects/HCC_TA_8datasets_merged_review_HGNC_v1.qs
+- objects/HCC_TA_8datasets_merged_review_HGNC_v1.h5ad
 
 Candidate integration feature universe:
 results/task004c_shared_hgnc_features_8of8.txt
 
-Select highly variable/integration features from this shared HGNC universe. Preserve the original source/raw objects separately for cohort-specific, viral/custom-feature and audit analyses.
+Select HVGs/integration features from this shared HGNC universe. Keep the original merged_review_v1 QS/H5AD as raw audit objects for cohort-specific, viral/custom-feature and provenance checks.
+
+Do not require eight separate harmonised cohort files; split or index the merged HGNC object by dataset as needed for integration.
 
 ## Default approach
 Use Seurat v5 RPCA integration as the default, with parameters chosen after inspecting object sizes, shared features and normalization state.
