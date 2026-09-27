@@ -16,6 +16,7 @@ def parse_args():
     p = argparse.ArgumentParser()
     p.add_argument("--source", required=True)
     p.add_argument("--out", required=True)
+    p.add_argument("--final-path", required=True)
     p.add_argument("--mapping", required=True)
     p.add_argument("--var", required=True)
     p.add_argument("--qs-validation", required=True)
@@ -44,6 +45,7 @@ def h5_index(group):
 args = parse_args()
 source_path = Path(args.source)
 out_path = Path(args.out)
+final_path = Path(args.final_path)
 mapping_path = Path(args.mapping)
 var_path = Path(args.var)
 validation_path = Path(args.validation)
@@ -274,7 +276,8 @@ if shell_path.exists():
 result = {
     "status": "VALIDATED",
     "source_h5ad": str(source_path),
-    "harmonised_h5ad": str(out_path),
+    "harmonised_h5ad_temp": str(out_path),
+    "harmonised_h5ad_final": str(final_path),
     "h5ad_size_bytes": out_path.stat().st_size,
     "n_obs": 1_490_852,
     "source_features": 68_394,
