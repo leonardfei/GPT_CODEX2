@@ -1,32 +1,23 @@
 # Project Status
 
 ## Current task
-Task 004c — in-place HGNC harmonisation of merged QS/H5AD — READY TO EXECUTE
+Task 004c — in-place HGNC harmonisation of merged QS/H5AD — COMPLETED
 
 Task 004b is COMPLETED:
 - 1,490,852 cells
-- 68,394 raw union features before harmonisation
-- 8 datasets
-- 194 samples
-- 132 patients
+- 68,394 source-union features before harmonisation
+- 8 datasets, 194 samples, 132 patients
 
-## Task 004c strategy
-The user explicitly requested direct replacement of the existing merged files.
+Task 004c is COMPLETED:
+- Both existing merged v1 paths were replaced only after temporary QS and H5AD outputs passed validation.
+- Final objects contain 1,490,852 cells and 38,025 unique HGNC-approved symbols; cell order and metadata were preserved.
+- Raw-count retention after removal of unmapped/ambiguous features: 99.3047% (9,890,904,647 / 9,960,157,768).
+- Shared HGNC features: 17,680 in all 8 cohorts; 21,169 in at least 7 cohorts.
+- Candidate neutrophils (preliminary Task 004 label): 65,546 before/after, 100% retention; no cells were filtered.
+- Review details: `reports/task_004c_report.md` and `results/task004c_*`.
 
-Target paths remain:
-- objects/HCC_TA_8datasets_merged_review_v1.qs
-- objects/HCC_TA_8datasets_merged_review_v1.h5ad
+Final server paths:
+- `/data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas/objects/HCC_TA_8datasets_merged_review_v1.qs`
+- `/data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas/objects/HCC_TA_8datasets_merged_review_v1.h5ad`
 
-Task 004c first creates temporary HGNC-standardised versions, validates both, then atomically overwrites these two original paths. If either validation fails, the originals remain untouched.
-
-After successful replacement, the merged v1 paths themselves will contain HGNC-approved gene symbols with duplicate mappings collapsed by exact raw-count summation.
-
-Unmapped/custom/non-human features will no longer be present in the overwritten merged objects, but remain recoverable from upstream cohort/source objects and the retained Task 004b merge checkpoint.
-
-## Next command
-Execute task_004c.
-
-Equivalent:
-bash scripts/bash/task004c_harmonize_features.sh /data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas
-
-Task 005 remains paused pending Task 004c review.
+Task 005 remains PAUSED pending review of Task 004c; it has not been executed.

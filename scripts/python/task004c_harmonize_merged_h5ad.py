@@ -25,23 +25,6 @@ def parse_args():
     return p.parse_args()
 
 
-def decode(arr):
-    arr = np.asarray(arr)
-    if arr.dtype.kind in {"S", "O"}:
-        return np.array([
-            x.decode("utf-8") if isinstance(x, (bytes, bytearray)) else str(x)
-            for x in arr
-        ], dtype=object)
-    return arr
-
-
-def h5_index(group):
-    key = group.attrs.get("_index", "_index")
-    if isinstance(key, bytes):
-        key = key.decode()
-    return decode(group[key][...])
-
-
 args = parse_args()
 source_path = Path(args.source)
 out_path = Path(args.out)
@@ -84,6 +67,37 @@ src = ad.read_h5ad(source_path, backed="r")
 n_obs, n_old = src.shape
 if (n_obs, n_old) != (1_490_852, 68_394):
     raise RuntimeError(f"Unexpected source H5AD shape: {src.shape}")
+source_obs_names = np.asarray(src.obs_names.astype(str))
+required_obs = (
+    "dataset", "sample_id", "patient_id", "tissue", "project_sample_id",
+    "project_patient_id", "nCount_RNA", "nFeature_RNA",
+)
+missing_obs = [name for name in required_obs if name not in src.obs.columns]
+if missing_obs:
+    raise RuntimeError(f"Source H5AD lacks required obs columns: {missing_obs}")
+if not src.obs_names.is_unique:
+    raise RuntimeError("Source H5AD obs_names are not unique")
+obs_missingness = {}
+for name in required_obs:
+    values = src.obs[name]
+    missing = values.isna()
+    if pd.api.types.is_object_dtype(values.dtype) or isinstance(values.dtype, pd.CategoricalDtype):
+        missing = missing | values.astype("string").str.strip().eq("")
+    obs_missingness[name] = int(missing.sum())
+if any(obs_missingness.values()):
+    raise RuntimeError(f"Missing values in required H5AD obs metadata: {obs_missingness}")
+if (
+    src.obs["dataset"].nunique(dropna=True) != 8
+    or src.obs["project_sample_id"].nunique(dropna=True) != 194
+    or src.obs["project_patient_id"].nunique(dropna=True) != 132
+):
+    raise RuntimeError("Source H5AD dataset/sample/patient identifiers differ from Task 004b")
+n_source_datasets = int(src.obs["dataset"].nunique(dropna=True))
+n_source_samples = int(src.obs["project_sample_id"].nunique(dropna=True))
+n_source_patients = int(src.obs["project_patient_id"].nunique(dropna=True))
+tissue_counts = src.obs["tissue"].value_counts(dropna=False).to_dict()
+if tissue_counts.get("Tumor", 0) != 1_039_293 or tissue_counts.get("Adjacent", 0) != 451_559:
+    raise RuntimeError(f"Source H5AD tissue counts differ from Task 004b: {tissue_counts}")
 
 source_var_names = np.asarray(src.var_names.astype(str))
 map_by_raw = mapping.set_index("raw_feature")
@@ -244,6 +258,16 @@ if not check.var_names.is_unique:
     raise RuntimeError("Harmonised H5AD var_names are not unique")
 if not np.array_equal(np.asarray(check.var_names.astype(str)), new_symbols):
     raise RuntimeError("Harmonised H5AD var order differs from canonical HGNC order")
+if not np.array_equal(np.asarray(check.obs_names.astype(str)), source_obs_names):
+    raise RuntimeError("Harmonised H5AD cell IDs or order differ from the source")
+expected_var = var_df
+if not check.var.index.equals(expected_var.index):
+    raise RuntimeError("Harmonised H5AD var index differs from the HGNC table")
+for col in expected_var.columns:
+    if col not in check.var or not np.array_equal(
+        check.var[col].astype(str).to_numpy(), expected_var[col].astype(str).to_numpy()
+    ):
+        raise RuntimeError(f"Harmonised H5AD HGNC var metadata mismatch: {col}")
 try:
     check.file.close()
 except Exception:
@@ -255,10 +279,16 @@ with h5py.File(tmp_path, "r") as h5:
     final_nnz = int(h5["X"]["data"].shape[0])
     if final_nnz != hgnc_nnz:
         raise RuntimeError("Harmonised H5AD nnz mismatch")
-    obs_names = h5_index(h5["obs"])
-    var_names = h5_index(h5["var"])
-    if len(obs_names) != 1_490_852 or len(var_names) != n_new:
-        raise RuntimeError("HDF5 axis lengths mismatch")
+    if h5["X"]["indptr"].dtype != np.dtype(np.int64):
+        raise RuntimeError("Harmonised H5AD CSR indptr is not int64")
+    if h5["X"]["indptr"].shape != (n_obs + 1,):
+        raise RuntimeError("Harmonised H5AD CSR indptr has the wrong length")
+    if int(h5["X"]["indptr"][-1]) != final_nnz:
+        raise RuntimeError("Harmonised H5AD CSR indptr endpoint differs from nnz")
+    if tuple(int(x) for x in h5["X"].attrs["shape"]) != (n_obs, n_new):
+        raise RuntimeError("Harmonised H5AD HDF5 X shape attribute mismatch")
+    if "obs" not in h5 or "var" not in h5:
+        raise RuntimeError("Harmonised H5AD is missing an obs or var axis")
 
 qs_source_total = float(qs_val["old_total_counts"])
 qs_hgnc_total = float(qs_val["hgnc_total_counts"])
@@ -289,6 +319,11 @@ result = {
     "hgnc_total_counts": hgnc_total_counts,
     "count_retention_fraction": hgnc_total_counts / source_total_counts,
     "obs_names_unique": True,
+    "core_obs_missingness": obs_missingness,
+    "n_datasets": n_source_datasets,
+    "n_samples": n_source_samples,
+    "n_patients": n_source_patients,
+    "tissue_counts": {str(k): int(v) for k, v in tissue_counts.items()},
     "var_names_unique": True,
     "X_encoding": "csr_matrix",
     "block_cells": args.block_cells,

@@ -1,7 +1,7 @@
 # Task 004c — HGNC harmonisation in-place on merged QS and H5AD
 
 ## Status
-READY TO EXECUTE
+COMPLETED
 
 ## Goal
 Standardise gene identifiers directly in the validated 1,490,852-cell merged review objects and overwrite the existing merged v1 QS/H5AD paths after successful validation.
@@ -83,5 +83,7 @@ Require >=50 GB free because temporary validated replacements must coexist with 
 cd /data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas
 bash scripts/bash/task004c_harmonize_features.sh /data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas
 
+Execution completed on 2026-09-27. Both validated temporary objects were promoted to the existing merged v1 paths. See `reports/task_004c_report.md` and `results/task004c_*` for validation and audit outputs.
+
 ## Stop rule
-Stop after the original merged v1 paths have been replaced by validated HGNC-standardised files. Do not execute Task 005 until Task 004c results are reviewed.
+Stop after the original merged v1 paths have been replaced by validated HGNC-standardised files. Task 005 remains paused until Task 004c results are reviewed.

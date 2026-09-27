@@ -43,11 +43,36 @@ dir.create(dirname(out_qs), recursive = TRUE, showWarnings = FALSE)
 
 hgnc_url <- "https://storage.googleapis.com/public-download-files/hgnc/tsv/tsv/hgnc_complete_set.txt"
 hgnc_path <- file.path(reference_dir, "hgnc_complete_set.txt")
-if (!file.exists(hgnc_path) || file.info(hgnc_path)$size < 1e6) {
-  message("Downloading current HGNC complete set...")
-  download.file(hgnc_url, hgnc_path, mode = "wb", quiet = FALSE)
+required_hgnc <- c(
+  "hgnc_id", "symbol", "status", "locus_group", "locus_type",
+  "alias_symbol", "prev_symbol", "ensembl_gene_id", "entrez_id"
+)
+hgnc_tmp <- paste0(hgnc_path, ".partial")
+message("Downloading current HGNC complete set to a temporary file...")
+unlink(hgnc_tmp)
+options(timeout = 1800)
+curl_status <- suppressWarnings(system2(
+  "curl",
+  args = c(
+    "--fail", "--location", "--retry", "3", "--connect-timeout", "30",
+    "--max-time", "1800", "--silent", "--show-error", "--output",
+    shQuote(hgnc_tmp), shQuote(hgnc_url)
+  ),
+  stdout = TRUE,
+  stderr = TRUE
+))
+if (!is.null(attr(curl_status, "status")) && attr(curl_status, "status") != 0L) {
+  stop("HGNC reference download failed: ", paste(curl_status, collapse = "\n"))
 }
-if (!file.exists(hgnc_path) || file.info(hgnc_path)$size < 1e6) stop("HGNC reference download failed")
+if (!file.exists(hgnc_tmp) || file.info(hgnc_tmp)$size < 1e7) {
+  stop("HGNC reference download is missing or unexpectedly small")
+}
+hgnc_header <- names(fread(hgnc_tmp, nrows = 0L))
+if (length(setdiff(required_hgnc, hgnc_header))) {
+  stop("Downloaded HGNC reference has an unexpected header")
+}
+if (!file.rename(hgnc_tmp, hgnc_path)) stop("Could not atomically install downloaded HGNC reference")
+if (!file.exists(hgnc_path) || file.info(hgnc_path)$size < 1e7) stop("HGNC reference download failed")
 
 sha256 <- tryCatch(
   strsplit(system2("sha256sum", hgnc_path, stdout = TRUE), "\\s+")[[1L]][[1L]],
@@ -63,10 +88,6 @@ writeLines(
 )
 
 hgnc <- fread(hgnc_path, na.strings = c("", "NA"))
-required_hgnc <- c(
-  "hgnc_id", "symbol", "status", "locus_group", "locus_type",
-  "alias_symbol", "prev_symbol", "ensembl_gene_id", "entrez_id"
-)
 miss <- setdiff(required_hgnc, names(hgnc))
 if (length(miss)) stop("HGNC reference lacks: ", paste(miss, collapse = ", "))
 hgnc <- hgnc[status == "Approved" & !is.na(symbol) & nzchar(symbol)]
@@ -83,11 +104,12 @@ approved <- hgnc[, .(
 
 make_scalar_map <- function(dt, key_col) {
   z <- dt[!is.na(get(key_col)) & nzchar(get(key_col)),
-          .(key = as.character(get(key_col)), canonical_symbol = symbol,
+          .(lookup_key = as.character(get(key_col)), canonical_symbol = symbol,
             hgnc_id, locus_group, locus_type)]
   if (!nrow(z)) return(list(unique = z, ambiguous = character()))
-  amb <- z[, .(n = uniqueN(canonical_symbol)), by = key][n > 1L, key]
-  u <- unique(z[!key %in% amb], by = "key")
+  amb <- z[, .(n = uniqueN(canonical_symbol)), by = lookup_key][n > 1L, lookup_key]
+  u <- unique(z[!lookup_key %in% amb], by = "lookup_key")
+  setnames(u, "lookup_key", "key")
   list(unique = u, ambiguous = amb)
 }
 
@@ -98,15 +120,16 @@ make_token_map <- function(dt, key_col) {
   if (!nrow(x)) return(list(unique = data.table(), ambiguous = character()))
   sp <- strsplit(x$tokens, "\\|")
   z <- data.table(
-    key = trimws(unlist(sp, use.names = FALSE)),
+    lookup_key = trimws(unlist(sp, use.names = FALSE)),
     canonical_symbol = rep(x$canonical_symbol, lengths(sp)),
     hgnc_id = rep(x$hgnc_id, lengths(sp)),
     locus_group = rep(x$locus_group, lengths(sp)),
     locus_type = rep(x$locus_type, lengths(sp))
   )
-  z <- z[!is.na(key) & nzchar(key)]
-  amb <- z[, .(n = uniqueN(canonical_symbol)), by = key][n > 1L, key]
-  u <- unique(z[!key %in% amb], by = "key")
+  z <- z[!is.na(lookup_key) & nzchar(lookup_key)]
+  amb <- z[, .(n = uniqueN(canonical_symbol)), by = lookup_key][n > 1L, lookup_key]
+  u <- unique(z[!lookup_key %in% amb], by = "lookup_key")
+  setnames(u, "lookup_key", "key")
   list(unique = u, ambiguous = amb)
 }
 
@@ -161,16 +184,20 @@ map_features <- function(features, dataset = "merged_union") {
     out[ok, mapping_status := "approved_symbol_exact"]
   }
 
-  rows <- which(is.na(out$canonical_symbol) & out$feature_class == "ensembl")
+  rows <- which(is.na(out$canonical_symbol) & is.na(out$mapping_status) &
+                  out$feature_class == "ensembl")
   out <- fill_from_map(out, rows, out$lookup_key[rows], ens_map,
                        "ensembl_to_hgnc", "ambiguous_ensembl")
-  rows <- which(is.na(out$canonical_symbol) & out$feature_class == "numeric_entrez_candidate")
+  rows <- which(is.na(out$canonical_symbol) & is.na(out$mapping_status) &
+                  out$feature_class == "numeric_entrez_candidate")
   out <- fill_from_map(out, rows, out$lookup_key[rows], entrez_map,
                        "entrez_to_hgnc", "ambiguous_entrez")
-  rows <- which(is.na(out$canonical_symbol) & out$feature_class == "symbol_or_other")
+  rows <- which(is.na(out$canonical_symbol) & is.na(out$mapping_status) &
+                  out$feature_class == "symbol_or_other")
   out <- fill_from_map(out, rows, out$raw_feature[rows], prev_map,
                        "previous_symbol_to_current", "ambiguous_previous_symbol")
-  rows <- which(is.na(out$canonical_symbol) & out$feature_class == "symbol_or_other")
+  rows <- which(is.na(out$canonical_symbol) & is.na(out$mapping_status) &
+                  out$feature_class == "symbol_or_other")
   out <- fill_from_map(out, rows, out$raw_feature[rows], alias_map,
                        "alias_symbol_to_current", "ambiguous_alias_symbol")
 
@@ -197,12 +224,55 @@ if (!inherits(counts_layer, "task004b_chunked_counts")) {
 old_features <- counts_layer$feature_names
 if (length(old_features) != 68394L || anyDuplicated(old_features)) stop("Source feature names invalid")
 
+input_meta <- obj[[]]
+required_metadata <- c(
+  "dataset", "sample_id", "patient_id", "tissue", "project_sample_id",
+  "project_patient_id", "nCount_RNA", "nFeature_RNA"
+)
+missing_metadata <- setdiff(required_metadata, colnames(input_meta))
+if (length(missing_metadata)) {
+  stop("Source QS lacks required metadata: ", paste(missing_metadata, collapse = ", "))
+}
+if (!identical(rownames(input_meta), colnames(obj))) stop("Source metadata row order differs from cell order")
+if (anyDuplicated(colnames(obj))) stop("Source QS contains duplicated cell IDs")
+required_missing <- vapply(required_metadata, function(nm) {
+  x <- input_meta[[nm]]
+  miss <- is.na(x)
+  if (is.character(x) || is.factor(x)) miss <- miss | !nzchar(trimws(as.character(x)))
+  sum(miss)
+}, integer(1L))
+if (any(required_missing > 0L)) {
+  stop("Missing values in required metadata: ",
+       paste(names(required_missing)[required_missing > 0L], required_missing[required_missing > 0L], collapse = ", "))
+}
+if (data.table::uniqueN(input_meta$dataset) != 8L ||
+    data.table::uniqueN(input_meta$project_sample_id) != 194L ||
+    data.table::uniqueN(input_meta$project_patient_id) != 132L) {
+  stop("Source QS dataset/sample/patient identifiers differ from the validated Task 004b counts")
+}
+if (sum(input_meta$tissue == "Tumor") != 1039293L ||
+    sum(input_meta$tissue == "Adjacent") != 451559L) {
+  stop("Source QS tissue cell counts differ from the validated Task 004b counts")
+}
+metadata_missingness <- data.table(
+  field = colnames(input_meta),
+  class = vapply(input_meta, function(x) paste(class(x), collapse = ";"), character(1L)),
+  n_missing = vapply(input_meta, function(x) {
+    miss <- is.na(x)
+    if (is.character(x) || is.factor(x)) miss <- miss | !nzchar(trimws(as.character(x)))
+    sum(miss)
+  }, integer(1L))
+)
+metadata_missingness[, fraction_missing := n_missing / nrow(input_meta)]
+fwrite(metadata_missingness, file.path(results_dir, "task004c_input_metadata_missingness.csv"))
+rm(input_meta, metadata_missingness)
+
 mapping <- map_features(old_features)
 mapping[, canonical_index := NA_integer_]
 new_symbols <- unique(mapping$canonical_symbol[mapping$mapped_hgnc])
-mapping[mapped_hgnc, canonical_index := match(canonical_symbol, new_symbols)]
+mapping[mapped_hgnc == TRUE, canonical_index := match(canonical_symbol, new_symbols)]
 
-canonical_meta <- unique(mapping[mapped_hgnc, .(
+canonical_meta <- unique(mapping[mapped_hgnc == TRUE, .(
   canonical_symbol, hgnc_id, locus_group, locus_type, canonical_index
 )], by = "canonical_symbol")
 setorder(canonical_meta, canonical_index)
@@ -227,13 +297,14 @@ colnames(aggregator) <- old_features
 old_total_counts <- 0
 new_total_counts <- 0
 new_chunks <- vector("list", length(counts_layer$chunks))
+source_chunk_count <- length(counts_layer$chunks)
 hgnc_nCount <- numeric(ncol(obj))
 hgnc_nFeature <- integer(ncol(obj))
 cell_cursor <- 0L
 
 message("Harmonising merged QS counts in ", length(counts_layer$chunks), " sparse chunks...")
-for (k in seq_along(counts_layer$chunks)) {
-  message("  chunk ", k, "/", length(counts_layer$chunks))
+for (k in seq_len(source_chunk_count)) {
+  message("  chunk ", k, "/", source_chunk_count)
   x <- counts_layer$chunks[[k]]
   if (!inherits(x, "sparseMatrix")) x <- as(x, "dgCMatrix")
   if (nrow(x) != length(old_features)) stop("Chunk feature dimension mismatch")
@@ -252,7 +323,14 @@ for (k in seq_along(counts_layer$chunks)) {
   cell_cursor <- cell_cursor + ncol(y)
 
   new_chunks[[k]] <- y
-  counts_layer$chunks[[k]] <- NULL
+  # Preserve list positions so later chunks retain their original indices.
+  counts_layer$chunks[k] <- list(NULL)
+  # Replace the source layer in the Seurat object as well, releasing the
+  # processed sparse block instead of retaining a second full source copy.
+  assay <- obj[["RNA"]]
+  assay@layers$counts <- counts_layer
+  obj@assays$RNA <- assay
+  rm(assay)
   rm(x, y)
   gc(verbose = FALSE)
 }
@@ -356,10 +434,28 @@ chk <- qs::qread(out_qs, use_alt_rep = FALSE, nthreads = 8L)
 if (!inherits(chk, "Seurat")) stop("Harmonised QS reload is not Seurat")
 if (ncol(chk) != expected_cells || nrow(chk) != expected_features) stop("Harmonised QS dimensions mismatch")
 if (!identical(colnames(chk), expected_cell_ids)) stop("Harmonised QS cell order changed")
+if (!identical(rownames(chk), new_symbols)) stop("Harmonised QS feature order changed")
 if (anyDuplicated(rownames(chk))) stop("Harmonised QS has duplicate gene symbols")
 if (!all(rownames(chk) %in% hgnc$symbol)) stop("Harmonised QS contains non-HGNC row names")
 if (!identical(SeuratObject::Layers(chk[["RNA"]]), "counts")) stop("Harmonised QS RNA layer mismatch")
 if (!inherits(chk[["RNA"]]@layers[["counts"]], "task004b_chunked_counts")) stop("Harmonised QS counts class mismatch")
+reloaded_counts <- chk[["RNA"]]@layers[["counts"]]
+reloaded_total_counts <- 0
+if (length(reloaded_counts$chunks) != source_chunk_count) stop("Harmonised QS chunk count changed")
+for (k in seq_len(source_chunk_count)) {
+  chunk <- reloaded_counts$chunks[[k]]
+  if (!inherits(chunk, "sparseMatrix")) stop("Reloaded QS chunk is not sparse: ", k)
+  reloaded_total_counts <- reloaded_total_counts + sum(chunk@x)
+}
+if (!identical(as.numeric(reloaded_total_counts), as.numeric(new_total_counts))) {
+  stop("Reloaded QS count total differs from the transformation total")
+}
+if (!identical(as.numeric(chk$hgnc_nCount_RNA), as.numeric(hgnc_nCount))) {
+  stop("Reloaded QS hgnc_nCount_RNA metadata mismatch")
+}
+if (!identical(as.integer(chk$hgnc_nFeature_RNA), as.integer(hgnc_nFeature))) {
+  stop("Reloaded QS hgnc_nFeature_RNA metadata mismatch")
+}
 
 validation <- data.table(
   status = "VALIDATED",

@@ -1,0 +1,40 @@
+{
+  "status": "VALIDATED",
+  "source_h5ad": "/data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas/objects/HCC_TA_8datasets_merged_review_v1.h5ad",
+  "harmonised_h5ad_temp": "/data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas/objects/HCC_TA_8datasets_merged_review_v1.h5ad.task004c_tmp.h5ad",
+  "harmonised_h5ad_final": "/data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas/objects/HCC_TA_8datasets_merged_review_v1.h5ad",
+  "h5ad_size_bytes": 7879382527,
+  "n_obs": 1490852,
+  "source_features": 68394,
+  "hgnc_features": 38025,
+  "mapped_source_feature_rows": 38957,
+  "source_nnz": 2885352168,
+  "hgnc_nnz": 2846908974,
+  "source_total_counts": 9960157768.0,
+  "hgnc_total_counts": 9890904647.0,
+  "count_retention_fraction": 0.9930469855384725,
+  "obs_names_unique": true,
+  "core_obs_missingness": {
+    "dataset": 0,
+    "sample_id": 0,
+    "patient_id": 0,
+    "tissue": 0,
+    "project_sample_id": 0,
+    "project_patient_id": 0,
+    "nCount_RNA": 0,
+    "nFeature_RNA": 0
+  },
+  "n_datasets": 8,
+  "n_samples": 194,
+  "n_patients": 132,
+  "tissue_counts": {
+    "Tumor": 1039293,
+    "Adjacent": 451559
+  },
+  "var_names_unique": true,
+  "X_encoding": "csr_matrix",
+  "block_cells": 10000,
+  "mapping_file": "/data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas/results/task004c_merged_feature_mapping.csv",
+  "var_file": "/data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas/results/task004c_hgnc_var.csv",
+  "qs_cross_validation": "PASSED"
+}
