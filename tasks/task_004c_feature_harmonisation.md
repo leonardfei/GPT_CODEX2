@@ -1,23 +1,28 @@
-# Task 004c — HGNC harmonisation directly in merged QS and H5AD
+# Task 004c — HGNC harmonisation in-place on merged QS and H5AD
 
 ## Status
 READY TO EXECUTE
 
 ## Goal
-Standardise gene identifiers directly in the validated 1,490,852-cell merged review objects, while preserving the original merged v1 QS/H5AD unchanged for audit and rollback.
+Standardise gene identifiers directly in the validated 1,490,852-cell merged review objects and overwrite the existing merged v1 QS/H5AD paths after successful validation.
 
-## Source objects
+## Files to overwrite
 - objects/HCC_TA_8datasets_merged_review_v1.qs
 - objects/HCC_TA_8datasets_merged_review_v1.h5ad
 
-## New outputs
-- objects/HCC_TA_8datasets_merged_review_HGNC_v1.qs
-- objects/HCC_TA_8datasets_merged_review_HGNC_v1.h5ad
+No separate *_HGNC_v1 duplicate files should be retained.
 
-Do not overwrite the source v1 objects.
+## Safety rule
+Do not write directly into the live source files while transformation is running.
 
-## HGNC reference and mapping
-Use the current official HGNC complete set and record retrieval date and SHA256.
+Instead:
+1. create temporary HGNC-standardised QS/H5AD files beside the originals;
+2. fully validate both temporary files;
+3. only if both validate, atomically replace the original merged v1 files with mv;
+4. if either transformation or validation fails, leave the original merged v1 files untouched.
+
+## HGNC mapping
+Use the current official HGNC complete set and record retrieval date plus SHA256.
 
 Mapping priority:
 1. exact current HGNC-approved symbol;
@@ -26,14 +31,15 @@ Mapping priority:
 4. unique previous HGNC symbol;
 5. unique HGNC alias.
 
-Ambiguous previous symbols/aliases/IDs are not force-mapped. Case-insensitive matching is not used.
+Ambiguous mappings are not force-resolved. Case-insensitive matching is not used.
 
-If multiple original features map to the same approved HGNC symbol, their raw counts are summed exactly.
+If multiple source rows map to the same approved HGNC symbol, sum raw counts exactly.
 
-Unmapped/custom/non-human features are excluded from the HGNC analysis object but remain preserved in the original merged_review_v1 QS/H5AD.
+Unmapped/custom/non-human features are removed from the overwritten merged analysis objects. They remain recoverable from upstream cohort/source objects and the retained Task 004b merge checkpoint.
 
 ## QS implementation
-The merged QS contains a task004b_chunked_counts layer. Apply the feature mapping once to the 68,394-feature union, then transform each existing sparse chunk independently using a sparse aggregation matrix. Preserve all 1,490,852 cells and metadata.
+Transform the existing task004b_chunked_counts layer chunk-by-chunk with a sparse aggregation matrix.
+Preserve all 1,490,852 cells, cell order, and metadata.
 
 Add:
 - source_nCount_RNA_before_feature_harmonisation
@@ -42,27 +48,22 @@ Add:
 - hgnc_nFeature_RNA
 - feature_harmonisation = HGNC_approved_symbol
 
-Validate by qread after writing the new QS.
-
 ## H5AD implementation
-Transform the validated merged H5AD directly, not via eight cohort H5AD files.
-
-Read the source CSR matrix in cell blocks (default 10,000 cells), remap/collapse feature columns with a sparse old-feature-to-HGNC matrix, and append the harmonised CSR arrays directly to a new H5AD on disk.
+Read the existing 38-GB CSR X matrix in 10,000-cell blocks and write a temporary HGNC-standardised CSR H5AD on disk.
 
 Requirements:
 - preserve obs and cell order exactly;
-- replace var with unique HGNC-approved symbols plus HGNC metadata;
-- use CSR X with int64 indptr;
-- avoid loading the full 38 GB matrix into memory;
-- cross-validate total source and retained HGNC counts against the QS transformation.
+- replace var with unique HGNC-approved symbols and HGNC metadata;
+- use int64 CSR indptr;
+- cross-validate source and retained count totals against the QS transformation.
 
-## Shared-gene audit for Task 005
-Although the harmonisation is performed directly in the merged files, inspect the eight cohort source feature lists only to calculate:
-- per-cohort mapped HGNC gene counts;
+## Shared-gene audit
+Inspect the eight cohort source feature lists to calculate:
+- per-cohort mapped HGNC feature counts;
 - strict 8/8 shared HGNC set;
 - >=7/8 shared HGNC set.
 
-No separate harmonised cohort objects are written.
+No separate harmonised cohort objects are created.
 
 ## Required outputs
 - results/task004c_merged_feature_mapping.csv
@@ -76,11 +77,11 @@ No separate harmonised cohort objects are written.
 - results/task004c_h5ad_validation.json
 
 ## Disk safety
-Require at least 50 GB free before execution. Keep both original merged v1 files and the new HGNC v1 files.
+Require >=50 GB free because temporary validated replacements must coexist with the current files until final atomic replacement.
 
-## Execute
+## Execution
 cd /data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas
 bash scripts/bash/task004c_harmonize_features.sh /data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas
 
 ## Stop rule
-Stop after both harmonised merged files validate and the shared-gene audit is complete. Do not execute Task 005 until Task 004c results are reviewed.
+Stop after the original merged v1 paths have been replaced by validated HGNC-standardised files. Do not execute Task 005 until Task 004c results are reviewed.
