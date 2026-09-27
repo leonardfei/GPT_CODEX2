@@ -1,29 +1,31 @@
 # Project Status
 
 ## Current task
-Task 004c — HGNC feature harmonisation — READY TO EXECUTE
+Task 004c — harmonise gene identifiers directly in merged QS/H5AD — READY TO EXECUTE
 
-Task 004b is COMPLETED:
+Task 004b remains COMPLETED and its validated raw-union outputs are frozen:
 - 1,490,852 cells
-- 68,394 raw union features
+- 68,394 union features
 - 8 datasets
 - 194 samples
 - 132 patients
-- QS and H5AD validated
 
-## Why Task 004c
-The 68,394-feature union is retained for archival/raw storage but should not be used directly as the cross-cohort integration feature universe.
+## Task 004c strategy
+Do not create eight separate harmonised cohort objects.
 
-Task 004c will:
-- preserve all Task 004/004b source objects unchanged;
-- download and checksum the current HGNC complete set;
-- standardise exact symbols, version-stripped Ensembl IDs, Entrez IDs, previous symbols and unique aliases to current HGNC-approved symbols;
-- refuse ambiguous mappings;
-- sum raw counts when multiple source rows map to one approved HGNC symbol;
-- create eight HGNC-harmonised counts+metadata cohort objects;
-- quantify the strict 8/8 shared HGNC gene set and >=7/8 set.
+Instead, use the validated merged files directly:
+- source QS: objects/HCC_TA_8datasets_merged_review_v1.qs
+- source H5AD: objects/HCC_TA_8datasets_merged_review_v1.h5ad
 
-Unmapped/custom/HBV features remain in source/raw objects but are excluded from the shared human integration universe.
+Create new HGNC-standardised analysis objects without overwriting the sources:
+- objects/HCC_TA_8datasets_merged_review_HGNC_v1.qs
+- objects/HCC_TA_8datasets_merged_review_HGNC_v1.h5ad
+
+Gene mapping uses current HGNC-approved symbols, with unique Ensembl/Entrez/previous-symbol/alias resolution and exact count summation for multiple source features mapping to the same HGNC symbol.
+
+The QS is transformed chunk-by-chunk. The H5AD is transformed directly from its CSR matrix in 10,000-cell blocks and written on disk, so the full 38 GB matrix is never loaded into memory.
+
+The original 68,394-feature merged v1 files remain preserved as the raw audit layer. Unmapped/custom/non-human features remain there but are excluded from the HGNC analysis objects.
 
 ## Next command
 Execute task_004c.
