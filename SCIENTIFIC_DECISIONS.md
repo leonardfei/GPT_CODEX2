@@ -91,13 +91,13 @@ Export architecture is resumable:
 These objects must not be described as an integrated atlas.
 
 ## D014 — Cross-cohort feature harmonisation
-The raw/source count matrices retain their original feature sets, and the Task 004b merged representation may retain the full feature union for archival purposes.
+The validated Task 004b merged QS/H5AD with the full 68,394-feature union remain frozen as raw audit objects.
 
-Before cross-cohort integration, human gene identifiers are harmonised to current HGNC-approved symbols. Mapping priority is exact approved symbol, version-stripped Ensembl gene ID, Entrez/NCBI Gene ID, unique previous HGNC symbol, then unique HGNC alias. Ambiguous aliases or historical symbols are not force-mapped.
+A separate merged analysis version is created directly from those validated merged objects with human gene identifiers harmonised to current HGNC-approved symbols. Mapping priority is exact approved symbol, version-stripped Ensembl gene ID, Entrez/NCBI Gene ID, unique previous HGNC symbol, then unique HGNC alias. Ambiguous aliases or historical symbols are not force-mapped.
 
-If multiple source rows map to the same approved HGNC symbol, raw counts are summed. Unmapped/custom/non-human features are retained in source objects but excluded from the shared human integration feature universe.
+If multiple source rows map to the same approved HGNC symbol, raw counts are summed. Unmapped/custom/non-human features remain preserved in the original merged_review_v1 objects but are excluded from the merged HGNC analysis objects.
 
-Task 005 integration features must be selected from the HGNC-harmonised genes shared across all eight cohorts, rather than from the 68,394-feature raw union.
+Task 005 must use the merged HGNC analysis object and select integration features from HGNC-harmonised genes shared across all eight cohorts, rather than from the 68,394-feature raw union. Separate harmonised cohort files are not required.
 
 ## Decision log
 - 2026-09-23: D001–D007 initialized.
