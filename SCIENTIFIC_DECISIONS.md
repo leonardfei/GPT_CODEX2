@@ -90,6 +90,15 @@ Export architecture is resumable:
 
 These objects must not be described as an integrated atlas.
 
+## D014 — Cross-cohort feature harmonisation
+The raw/source count matrices retain their original feature sets, and the Task 004b merged representation may retain the full feature union for archival purposes.
+
+Before cross-cohort integration, human gene identifiers are harmonised to current HGNC-approved symbols. Mapping priority is exact approved symbol, version-stripped Ensembl gene ID, Entrez/NCBI Gene ID, unique previous HGNC symbol, then unique HGNC alias. Ambiguous aliases or historical symbols are not force-mapped.
+
+If multiple source rows map to the same approved HGNC symbol, raw counts are summed. Unmapped/custom/non-human features are retained in source objects but excluded from the shared human integration feature universe.
+
+Task 005 integration features must be selected from the HGNC-harmonised genes shared across all eight cohorts, rather than from the 68,394-feature raw union.
+
 ## Decision log
 - 2026-09-23: D001–D007 initialized.
 - 2026-09-24: original five-cohort phase-1 set defined; GSE202642/GSE290298 held.
@@ -97,3 +106,4 @@ These objects must not be described as an integrated atlas.
 - 2026-09-24: D008, D010 and D011 updated/added to expand the atlas with CRA002308, nature_xue and in_house.
 - 2026-09-24: D012 added after Task 003 review to correct nature_xue patient/pairing metadata and set CRA002308 abundance eligibility to CONDITIONAL.
 - 2026-09-25: D013 added at user request to create an eight-cohort unintegrated merge object for manual annotation review before final annotation correction/integration.
+- 2026-09-27: D014 added to standardise cross-cohort human features to current HGNC-approved symbols before Task 005.
