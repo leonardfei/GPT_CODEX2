@@ -91,13 +91,15 @@ Export architecture is resumable:
 These objects must not be described as an integrated atlas.
 
 ## D014 — Cross-cohort feature harmonisation
-The validated Task 004b merged QS/H5AD with the full 68,394-feature union remain frozen as raw audit objects.
+The existing Task 004b merged QS/H5AD paths are standardised in place to current HGNC-approved human gene symbols before Task 005.
 
-A separate merged analysis version is created directly from those validated merged objects with human gene identifiers harmonised to current HGNC-approved symbols. Mapping priority is exact approved symbol, version-stripped Ensembl gene ID, Entrez/NCBI Gene ID, unique previous HGNC symbol, then unique HGNC alias. Ambiguous aliases or historical symbols are not force-mapped.
+Transformation is performed through validated temporary files and atomic replacement: the original merged v1 paths are overwritten only after both HGNC-standardised QS and H5AD validate successfully. If validation fails, the original files remain unchanged.
 
-If multiple source rows map to the same approved HGNC symbol, raw counts are summed. Unmapped/custom/non-human features remain preserved in the original merged_review_v1 objects but are excluded from the merged HGNC analysis objects.
+Mapping priority is exact approved symbol, version-stripped Ensembl gene ID, Entrez/NCBI Gene ID, unique previous HGNC symbol, then unique HGNC alias. Ambiguous aliases or historical symbols are not force-mapped.
 
-Task 005 must use the merged HGNC analysis object and select integration features from HGNC-harmonised genes shared across all eight cohorts, rather than from the 68,394-feature raw union. Separate harmonised cohort files are not required.
+If multiple source rows map to the same approved HGNC symbol, raw counts are summed exactly. Unmapped/custom/non-human features are removed from the overwritten merged objects but remain recoverable from upstream cohort/source objects and the retained Task 004b merge checkpoint.
+
+Task 005 uses the overwritten merged v1 HGNC-standardised objects and selects integration features from HGNC-harmonised genes shared across all eight cohorts. Separate harmonised cohort files are not required.
 
 ## Decision log
 - 2026-09-23: D001–D007 initialized.
