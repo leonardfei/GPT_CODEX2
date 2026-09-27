@@ -17,32 +17,25 @@ arg_value <- function(name, default = NULL) {
 project_root <- normalizePath(arg_value("project-root", "."), mustWork = TRUE)
 r_lib <- arg_value("r-lib", file.path(project_root, ".task004b_Rlib"))
 .libPaths(c(r_lib, .libPaths()))
-if (!requireNamespace("qs", quietly = TRUE)) {
-  stop("Package 'qs' is required. Reuse the isolated Task 004b R library or install qs 0.27.3.")
-}
+if (!requireNamespace("qs", quietly = TRUE)) stop("Package 'qs' is required")
 
+source_qs <- arg_value(
+  "source-qs",
+  file.path(project_root, "objects", "HCC_TA_8datasets_merged_review_v1.qs")
+)
+out_qs <- arg_value(
+  "out-qs",
+  file.path(project_root, "objects", "HCC_TA_8datasets_merged_review_HGNC_v1.qs")
+)
 cohort_summary_path <- arg_value(
   "cohort-summary",
   file.path(project_root, "results", "task004b_merge_review_cohort_summary.csv")
 )
-reference_dir <- arg_value(
-  "reference-dir",
-  file.path(project_root, "references", "task004c")
-)
-object_dir <- arg_value(
-  "object-dir",
-  file.path(project_root, "objects", "task004c_feature_harmonized")
-)
-results_dir <- arg_value("results-dir", file.path(project_root, "results"))
-report_path <- arg_value(
-  "report",
-  file.path(project_root, "reports", "task_004c_report.md")
-)
-
+reference_dir <- file.path(project_root, "references", "task004c")
+results_dir <- file.path(project_root, "results")
 dir.create(reference_dir, recursive = TRUE, showWarnings = FALSE)
-dir.create(object_dir, recursive = TRUE, showWarnings = FALSE)
 dir.create(results_dir, recursive = TRUE, showWarnings = FALSE)
-dir.create(dirname(report_path), recursive = TRUE, showWarnings = FALSE)
+dir.create(dirname(out_qs), recursive = TRUE, showWarnings = FALSE)
 
 hgnc_url <- "https://storage.googleapis.com/public-download-files/hgnc/tsv/tsv/hgnc_complete_set.txt"
 hgnc_path <- file.path(reference_dir, "hgnc_complete_set.txt")
@@ -50,9 +43,8 @@ if (!file.exists(hgnc_path) || file.info(hgnc_path)$size < 1e6) {
   message("Downloading current HGNC complete set...")
   download.file(hgnc_url, hgnc_path, mode = "wb", quiet = FALSE)
 }
-if (!file.exists(hgnc_path) || file.info(hgnc_path)$size < 1e6) {
-  stop("HGNC reference download failed or is unexpectedly small")
-}
+if (!file.exists(hgnc_path) || file.info(hgnc_path)$size < 1e6) stop("HGNC reference download failed")
+
 sha256 <- tryCatch(
   strsplit(system2("sha256sum", hgnc_path, stdout = TRUE), "\\s+")[[1L]][[1L]],
   error = function(e) NA_character_
@@ -71,14 +63,12 @@ required_hgnc <- c(
   "hgnc_id", "symbol", "status", "locus_group", "locus_type",
   "alias_symbol", "prev_symbol", "ensembl_gene_id", "entrez_id"
 )
-missing_hgnc <- setdiff(required_hgnc, names(hgnc))
-if (length(missing_hgnc)) {
-  stop("HGNC reference lacks required fields: ", paste(missing_hgnc, collapse = ", "))
-}
+miss <- setdiff(required_hgnc, names(hgnc))
+if (length(miss)) stop("HGNC reference lacks: ", paste(miss, collapse = ", "))
 hgnc <- hgnc[status == "Approved" & !is.na(symbol) & nzchar(symbol)]
-if (anyDuplicated(hgnc$symbol)) stop("HGNC approved symbol table contains duplicates")
+if (anyDuplicated(hgnc$symbol)) stop("HGNC approved symbols are duplicated")
 
-approved_map <- hgnc[, .(
+approved <- hgnc[, .(
   canonical_symbol = symbol,
   hgnc_id,
   locus_group,
@@ -87,69 +77,62 @@ approved_map <- hgnc[, .(
   entrez_id
 )]
 
-make_unique_scalar_map <- function(dt, key_col, source_type) {
+make_scalar_map <- function(dt, key_col) {
   z <- dt[!is.na(get(key_col)) & nzchar(get(key_col)),
-          .(canonical_symbol = symbol, hgnc_id, locus_group, locus_type,
-            key = as.character(get(key_col)))]
+          .(key = as.character(get(key_col)), canonical_symbol = symbol,
+            hgnc_id, locus_group, locus_type)]
   if (!nrow(z)) return(list(unique = z, ambiguous = character()))
-  counts <- z[, .(n_symbol = uniqueN(canonical_symbol)), by = key]
-  ambiguous <- counts[n_symbol > 1L, key]
-  u <- z[!key %in% ambiguous]
-  if (nrow(u)) u <- unique(u, by = "key")
-  u[, mapping_source := source_type]
-  list(unique = u, ambiguous = ambiguous)
+  amb <- z[, .(n = uniqueN(canonical_symbol)), by = key][n > 1L, key]
+  u <- unique(z[!key %in% amb], by = "key")
+  list(unique = u, ambiguous = amb)
 }
 
-make_token_map <- function(dt, key_col, source_type) {
+make_token_map <- function(dt, key_col) {
   x <- dt[!is.na(get(key_col)) & nzchar(get(key_col)),
           .(canonical_symbol = symbol, hgnc_id, locus_group, locus_type,
             tokens = as.character(get(key_col)))]
   if (!nrow(x)) return(list(unique = data.table(), ambiguous = character()))
-  pieces <- strsplit(x$tokens, "\\|")
+  sp <- strsplit(x$tokens, "\\|")
   z <- data.table(
-    key = trimws(unlist(pieces, use.names = FALSE)),
-    canonical_symbol = rep(x$canonical_symbol, lengths(pieces)),
-    hgnc_id = rep(x$hgnc_id, lengths(pieces)),
-    locus_group = rep(x$locus_group, lengths(pieces)),
-    locus_type = rep(x$locus_type, lengths(pieces))
+    key = trimws(unlist(sp, use.names = FALSE)),
+    canonical_symbol = rep(x$canonical_symbol, lengths(sp)),
+    hgnc_id = rep(x$hgnc_id, lengths(sp)),
+    locus_group = rep(x$locus_group, lengths(sp)),
+    locus_type = rep(x$locus_type, lengths(sp))
   )
   z <- z[!is.na(key) & nzchar(key)]
-  counts <- z[, .(n_symbol = uniqueN(canonical_symbol)), by = key]
-  ambiguous <- counts[n_symbol > 1L, key]
-  u <- z[!key %in% ambiguous]
-  if (nrow(u)) u <- unique(u, by = "key")
-  u[, mapping_source := source_type]
-  list(unique = u, ambiguous = ambiguous)
+  amb <- z[, .(n = uniqueN(canonical_symbol)), by = key][n > 1L, key]
+  u <- unique(z[!key %in% amb], by = "key")
+  list(unique = u, ambiguous = amb)
 }
 
-ens_map <- make_unique_scalar_map(hgnc, "ensembl_gene_id", "ensembl")
-entrez_map <- make_unique_scalar_map(hgnc, "entrez_id", "entrez")
-prev_map <- make_token_map(hgnc, "prev_symbol", "previous_symbol")
-alias_map <- make_token_map(hgnc, "alias_symbol", "alias_symbol")
+ens_map <- make_scalar_map(hgnc, "ensembl_gene_id")
+entrez_map <- make_scalar_map(hgnc, "entrez_id")
+prev_map <- make_token_map(hgnc, "prev_symbol")
+alias_map <- make_token_map(hgnc, "alias_symbol")
 
-lookup_from <- function(keys, map) {
-  if (!nrow(map)) {
-    return(data.table(
-      key = keys, canonical_symbol = NA_character_, hgnc_id = NA_character_,
-      locus_group = NA_character_, locus_type = NA_character_,
-      mapping_source = NA_character_
-    ))
+fill_from_map <- function(out, rows, keys, mp, status, ambiguous_status) {
+  if (!length(rows)) return(out)
+  hit <- match(keys, mp$unique$key)
+  good <- !is.na(hit)
+  if (any(good)) {
+    rr <- rows[good]
+    mm <- hit[good]
+    out[rr, canonical_symbol := mp$unique$canonical_symbol[mm]]
+    out[rr, hgnc_id := mp$unique$hgnc_id[mm]]
+    out[rr, locus_group := mp$unique$locus_group[mm]]
+    out[rr, locus_type := mp$unique$locus_type[mm]]
+    out[rr, mapping_status := status]
   }
-  m <- map[match(keys, map$key)]
-  data.table(
-    key = keys,
-    canonical_symbol = m$canonical_symbol,
-    hgnc_id = m$hgnc_id,
-    locus_group = m$locus_group,
-    locus_type = m$locus_type,
-    mapping_source = m$mapping_source
-  )
+  amb <- keys %in% mp$ambiguous
+  if (any(amb)) out[rows[amb], mapping_status := ambiguous_status]
+  out
 }
 
-map_features <- function(features, dataset_name) {
+map_features <- function(features, dataset = "merged_union") {
   out <- data.table(
-    dataset = dataset_name,
-    raw_feature = features,
+    dataset = dataset,
+    raw_feature = as.character(features),
     feature_index = seq_along(features)
   )
   out[, feature_class := fifelse(
@@ -158,307 +141,237 @@ map_features <- function(features, dataset_name) {
   )]
   out[, lookup_key := raw_feature]
   out[feature_class == "ensembl", lookup_key := sub("\\.[0-9]+$", "", raw_feature)]
-
   out[, canonical_symbol := NA_character_]
   out[, hgnc_id := NA_character_]
   out[, locus_group := NA_character_]
   out[, locus_type := NA_character_]
   out[, mapping_status := NA_character_]
 
-  hit <- match(out$raw_feature, approved_map$canonical_symbol)
+  hit <- match(out$raw_feature, approved$canonical_symbol)
   ok <- !is.na(hit)
   if (any(ok)) {
-    out[ok, canonical_symbol := approved_map$canonical_symbol[hit[ok]]]
-    out[ok, hgnc_id := approved_map$hgnc_id[hit[ok]]]
-    out[ok, locus_group := approved_map$locus_group[hit[ok]]]
-    out[ok, locus_type := approved_map$locus_type[hit[ok]]]
+    out[ok, canonical_symbol := approved$canonical_symbol[hit[ok]]]
+    out[ok, hgnc_id := approved$hgnc_id[hit[ok]]]
+    out[ok, locus_group := approved$locus_group[hit[ok]]]
+    out[ok, locus_type := approved$locus_type[hit[ok]]]
     out[ok, mapping_status := "approved_symbol_exact"]
   }
 
-  todo <- is.na(out$canonical_symbol) & out$feature_class == "ensembl"
-  if (any(todo)) {
-    m <- lookup_from(out$lookup_key[todo], ens_map$unique)
-    rows <- which(todo)
-    good <- !is.na(m$canonical_symbol)
-    if (any(good)) {
-      rr <- rows[good]
-      out[rr, canonical_symbol := m$canonical_symbol[good]]
-      out[rr, hgnc_id := m$hgnc_id[good]]
-      out[rr, locus_group := m$locus_group[good]]
-      out[rr, locus_type := m$locus_type[good]]
-      out[rr, mapping_status := "ensembl_to_hgnc"]
-    }
-    amb <- out$lookup_key[rows] %in% ens_map$ambiguous
-    if (any(amb)) out[rows[amb], mapping_status := "ambiguous_ensembl"]
-  }
+  rows <- which(is.na(out$canonical_symbol) & out$feature_class == "ensembl")
+  out <- fill_from_map(out, rows, out$lookup_key[rows], ens_map,
+                       "ensembl_to_hgnc", "ambiguous_ensembl")
+  rows <- which(is.na(out$canonical_symbol) & out$feature_class == "numeric_entrez_candidate")
+  out <- fill_from_map(out, rows, out$lookup_key[rows], entrez_map,
+                       "entrez_to_hgnc", "ambiguous_entrez")
+  rows <- which(is.na(out$canonical_symbol) & out$feature_class == "symbol_or_other")
+  out <- fill_from_map(out, rows, out$raw_feature[rows], prev_map,
+                       "previous_symbol_to_current", "ambiguous_previous_symbol")
+  rows <- which(is.na(out$canonical_symbol) & out$feature_class == "symbol_or_other")
+  out <- fill_from_map(out, rows, out$raw_feature[rows], alias_map,
+                       "alias_symbol_to_current", "ambiguous_alias_symbol")
 
-  todo <- is.na(out$canonical_symbol) & out$feature_class == "numeric_entrez_candidate"
-  if (any(todo)) {
-    m <- lookup_from(out$lookup_key[todo], entrez_map$unique)
-    rows <- which(todo)
-    good <- !is.na(m$canonical_symbol)
-    if (any(good)) {
-      rr <- rows[good]
-      out[rr, canonical_symbol := m$canonical_symbol[good]]
-      out[rr, hgnc_id := m$hgnc_id[good]]
-      out[rr, locus_group := m$locus_group[good]]
-      out[rr, locus_type := m$locus_type[good]]
-      out[rr, mapping_status := "entrez_to_hgnc"]
-    }
-    amb <- out$lookup_key[rows] %in% entrez_map$ambiguous
-    if (any(amb)) out[rows[amb], mapping_status := "ambiguous_entrez"]
-  }
-
-  todo <- is.na(out$canonical_symbol) & out$feature_class == "symbol_or_other"
-  if (any(todo)) {
-    m <- lookup_from(out$raw_feature[todo], prev_map$unique)
-    rows <- which(todo)
-    good <- !is.na(m$canonical_symbol)
-    if (any(good)) {
-      rr <- rows[good]
-      out[rr, canonical_symbol := m$canonical_symbol[good]]
-      out[rr, hgnc_id := m$hgnc_id[good]]
-      out[rr, locus_group := m$locus_group[good]]
-      out[rr, locus_type := m$locus_type[good]]
-      out[rr, mapping_status := "previous_symbol_to_current"]
-    }
-    amb <- out$raw_feature[rows] %in% prev_map$ambiguous
-    if (any(amb)) out[rows[amb], mapping_status := "ambiguous_previous_symbol"]
-  }
-
-  todo <- is.na(out$canonical_symbol) & out$feature_class == "symbol_or_other"
-  if (any(todo)) {
-    m <- lookup_from(out$raw_feature[todo], alias_map$unique)
-    rows <- which(todo)
-    good <- !is.na(m$canonical_symbol)
-    if (any(good)) {
-      rr <- rows[good]
-      out[rr, canonical_symbol := m$canonical_symbol[good]]
-      out[rr, hgnc_id := m$hgnc_id[good]]
-      out[rr, locus_group := m$locus_group[good]]
-      out[rr, locus_type := m$locus_type[good]]
-      out[rr, mapping_status := "alias_symbol_to_current"]
-    }
-    amb <- out$raw_feature[rows] %in% alias_map$ambiguous
-    if (any(amb)) out[rows[amb], mapping_status := "ambiguous_alias_symbol"]
-  }
-
-  out[is.na(mapping_status), mapping_status := "unmapped_preserved_in_source_only"]
+  out[is.na(mapping_status), mapping_status := "unmapped_preserved_in_v1_only"]
   out[, mapped_hgnc := !is.na(canonical_symbol)]
   out[, ensembl_version_removed := feature_class == "ensembl" & raw_feature != lookup_key]
   out
 }
 
-collapse_to_hgnc <- function(counts, mapping, dataset_name) {
-  keep <- which(mapping$mapped_hgnc)
-  if (!length(keep)) stop("No HGNC-mapped features for ", dataset_name)
-  x <- counts[keep, , drop = FALSE]
-  canonical <- mapping$canonical_symbol[keep]
+# Methods needed for the custom Task 004b counts layer after qread.
+dim.task004b_chunked_counts <- function(x) c(length(x$feature_names), length(x$cell_names))
+dimnames.task004b_chunked_counts <- function(x) list(x$feature_names, x$cell_names)
 
-  if (!anyDuplicated(canonical)) {
-    rownames(x) <- canonical
-    return(x)
-  }
+message("Reading merged QS: ", source_qs)
+obj <- qs::qread(source_qs, use_alt_rep = FALSE, nthreads = 8L)
+if (!inherits(obj, "Seurat")) stop("Source QS is not Seurat")
+if (ncol(obj) != 1490852L || nrow(obj) != 68394L) stop("Source QS dimensions mismatch")
+if (!identical(SeuratObject::Layers(obj[["RNA"]]), "counts")) stop("Source QS must have one counts layer")
 
-  new_symbols <- unique(canonical)
-  group_index <- match(canonical, new_symbols)
-  aggregator <- sparseMatrix(
-    i = group_index,
-    j = seq_along(group_index),
-    x = 1,
-    dims = c(length(new_symbols), length(group_index))
-  )
+counts_layer <- obj[["RNA"]]@layers[["counts"]]
+if (!inherits(counts_layer, "task004b_chunked_counts")) {
+  stop("Expected task004b_chunked_counts in merged QS")
+}
+old_features <- counts_layer$feature_names
+if (length(old_features) != 68394L || anyDuplicated(old_features)) stop("Source feature names invalid")
+
+mapping <- map_features(old_features)
+mapping[, canonical_index := NA_integer_]
+new_symbols <- unique(mapping$canonical_symbol[mapping$mapped_hgnc])
+mapping[mapped_hgnc, canonical_index := match(canonical_symbol, new_symbols)]
+
+canonical_meta <- unique(mapping[mapped_hgnc, .(
+  canonical_symbol, hgnc_id, locus_group, locus_type, canonical_index
+)], by = "canonical_symbol")
+setorder(canonical_meta, canonical_index)
+if (!identical(canonical_meta$canonical_symbol, new_symbols)) stop("Canonical feature ordering mismatch")
+if (anyDuplicated(new_symbols)) stop("Canonical symbols duplicated")
+
+fwrite(mapping, file.path(results_dir, "task004c_merged_feature_mapping.csv"))
+fwrite(canonical_meta, file.path(results_dir, "task004c_hgnc_var.csv"))
+fwrite(mapping[, .N, by = mapping_status][order(-N)],
+       file.path(results_dir, "task004c_mapping_status_counts.csv"))
+
+mapped_rows <- which(mapping$mapped_hgnc)
+aggregator <- sparseMatrix(
+  i = mapping$canonical_index[mapped_rows],
+  j = mapped_rows,
+  x = 1,
+  dims = c(length(new_symbols), length(old_features))
+)
+rownames(aggregator) <- new_symbols
+colnames(aggregator) <- old_features
+
+old_total_counts <- 0
+new_total_counts <- 0
+new_chunks <- vector("list", length(counts_layer$chunks))
+hgnc_nCount <- numeric(ncol(obj))
+hgnc_nFeature <- integer(ncol(obj))
+cell_cursor <- 0L
+
+message("Harmonising merged QS counts in ", length(counts_layer$chunks), " sparse chunks...")
+for (k in seq_along(counts_layer$chunks)) {
+  message("  chunk ", k, "/", length(counts_layer$chunks))
+  x <- counts_layer$chunks[[k]]
+  if (!inherits(x, "sparseMatrix")) x <- as(x, "dgCMatrix")
+  if (nrow(x) != length(old_features)) stop("Chunk feature dimension mismatch")
+  old_total_counts <- old_total_counts + sum(x@x)
+
   y <- aggregator %*% x
+  y <- as(y, "dgCMatrix")
   rownames(y) <- new_symbols
   colnames(y) <- colnames(x)
-  if (anyDuplicated(rownames(y))) stop("Duplicate HGNC symbols remain after collapse: ", dataset_name)
-  y
-}
+  y <- drop0(y)
 
+  new_total_counts <- new_total_counts + sum(y@x)
+  cols <- seq_len(ncol(y)) + cell_cursor
+  hgnc_nCount[cols] <- Matrix::colSums(y)
+  hgnc_nFeature[cols] <- diff(y@p)
+  cell_cursor <- cell_cursor + ncol(y)
+
+  new_chunks[[k]] <- y
+  counts_layer$chunks[[k]] <- NULL
+  rm(x, y)
+  gc(verbose = FALSE)
+}
+if (cell_cursor != ncol(obj)) stop("Processed cell count mismatch")
+
+offsets <- c(0L, cumsum(vapply(new_chunks, ncol, integer(1L))))
+new_counts <- structure(
+  list(
+    chunks = new_chunks,
+    feature_names = new_symbols,
+    cell_names = counts_layer$cell_names,
+    offsets = offsets
+  ),
+  class = "task004b_chunked_counts"
+)
+
+assay <- obj[["RNA"]]
+assay@layers$counts <- new_counts
+assay@features <- SeuratObject:::LogMap(new_symbols)
+assay@meta.data <- data.frame(row.names = new_symbols)
+obj@assays$RNA <- assay
+obj$source_nCount_RNA_before_feature_harmonisation <- obj$nCount_RNA
+obj$source_nFeature_RNA_before_feature_harmonisation <- obj$nFeature_RNA
+obj$hgnc_nCount_RNA <- hgnc_nCount
+obj$hgnc_nFeature_RNA <- hgnc_nFeature
+obj$feature_harmonisation <- "HGNC_approved_symbol"
+obj@misc$feature_harmonisation <- list(
+  task = "task_004c",
+  source_object = source_qs,
+  source_feature_count = length(old_features),
+  harmonised_feature_count = length(new_symbols),
+  reference = "HGNC complete set",
+  reference_url = hgnc_url,
+  reference_sha256 = sha256,
+  reference_retrieved_date = format(Sys.Date(), "%Y-%m-%d"),
+  mapping_rule = "approved symbol > version-stripped Ensembl > Entrez > unique previous symbol > unique alias",
+  duplicate_rule = "raw counts summed for source features mapping to the same HGNC-approved symbol",
+  unmapped_rule = "excluded from HGNC v1 analysis object; preserved in merged_review_v1",
+  old_total_counts = old_total_counts,
+  hgnc_total_counts = new_total_counts,
+  count_retention_fraction = new_total_counts / old_total_counts
+)
+
+# Cheap source-cohort presence audit only; no cohort harmonised objects are written.
 cohort_summary <- fread(cohort_summary_path)
 expected_datasets <- c(
   "GSE282701", "GSE242889", "GSE326201", "GSE149614",
   "GSE299340", "CRA002308", "nature_xue", "in_house"
 )
-if (!setequal(cohort_summary$dataset, expected_datasets)) {
-  stop("Dataset mismatch in Task 004b cohort summary")
-}
-
-mapping_list <- list()
-audit_rows <- list()
 presence_list <- list()
-object_rows <- list()
-
-for (dataset_name in expected_datasets) {
-  source_path <- cohort_summary[dataset == dataset_name, cohort_object_path][[1L]]
-  message("Harmonising features: ", dataset_name)
-  obj <- readRDS(source_path)
-  if (!inherits(obj, "Seurat") || !"RNA" %in% Assays(obj)) stop("Invalid cohort object: ", source_path)
-  if (!identical(SeuratObject::Layers(obj[["RNA"]]), "counts")) stop("Expected exactly one counts layer in ", dataset_name)
-
-  counts <- SeuratObject::LayerData(obj[["RNA"]], layer = "counts")
-  original_features <- rownames(counts)
-  if (anyDuplicated(original_features)) stop("Source object has duplicate feature names: ", dataset_name)
-
-  mp <- map_features(original_features, dataset_name)
-  mapping_list[[dataset_name]] <- mp
-  mapped_unique <- unique(mp$canonical_symbol[mp$mapped_hgnc])
-
-  audit_rows[[dataset_name]] <- data.table(
-    dataset = dataset_name,
-    source_features = length(original_features),
+cohort_audit <- list()
+for (d in expected_datasets) {
+  p <- cohort_summary[dataset == d, cohort_object_path][[1L]]
+  o <- readRDS(p)
+  f <- rownames(SeuratObject::LayerData(o[["RNA"]], layer = "counts"))
+  mp <- map_features(f, d)
+  syms <- unique(mp$canonical_symbol[mp$mapped_hgnc])
+  presence_list[[d]] <- data.table(canonical_symbol = syms, dataset = d)
+  cohort_audit[[d]] <- data.table(
+    dataset = d,
+    source_features = length(f),
     mapped_feature_rows = sum(mp$mapped_hgnc),
-    mapped_unique_hgnc_symbols = length(mapped_unique),
-    mapping_rate_feature_rows = sum(mp$mapped_hgnc) / length(original_features),
-    approved_symbol_exact = sum(mp$mapping_status == "approved_symbol_exact"),
-    ensembl_to_hgnc = sum(mp$mapping_status == "ensembl_to_hgnc"),
-    entrez_to_hgnc = sum(mp$mapping_status == "entrez_to_hgnc"),
-    previous_symbol_to_current = sum(mp$mapping_status == "previous_symbol_to_current"),
-    alias_symbol_to_current = sum(mp$mapping_status == "alias_symbol_to_current"),
+    mapped_unique_hgnc_symbols = length(syms),
+    mapping_rate = sum(mp$mapped_hgnc) / length(f),
     ambiguous = sum(grepl("^ambiguous_", mp$mapping_status)),
-    unmapped = sum(mp$mapping_status == "unmapped_preserved_in_source_only"),
-    ensembl_version_removed = sum(mp$ensembl_version_removed),
-    duplicate_rows_collapsed = sum(mp$mapped_hgnc) - length(mapped_unique)
+    unmapped = sum(mp$mapping_status == "unmapped_preserved_in_v1_only")
   )
-
-  presence_list[[dataset_name]] <- data.table(
-    canonical_symbol = mapped_unique,
-    dataset = dataset_name
-  )
-
-  md <- obj[[]]
-  if ("nCount_RNA" %in% colnames(md)) {
-    md$source_nCount_RNA_before_feature_harmonisation <- md$nCount_RNA
-  }
-  if ("nFeature_RNA" %in% colnames(md)) {
-    md$source_nFeature_RNA_before_feature_harmonisation <- md$nFeature_RNA
-  }
-
-  hcounts <- collapse_to_hgnc(counts, mp, dataset_name)
-  hobj <- CreateSeuratObject(
-    counts = hcounts,
-    assay = "RNA",
-    project = paste0(dataset_name, "_HGNC"),
-    meta.data = md
-  )
-  hobj$feature_harmonisation <- "HGNC_approved_symbol"
-  hobj@misc$feature_harmonisation <- list(
-    task = "task_004c",
-    reference = "HGNC complete set",
-    reference_url = hgnc_url,
-    reference_sha256 = sha256,
-    reference_retrieved_date = format(Sys.Date(), "%Y-%m-%d"),
-    original_feature_count = length(original_features),
-    mapped_feature_rows = sum(mp$mapped_hgnc),
-    harmonised_feature_count = nrow(hobj),
-    mapping_rule = "approved symbol > Ensembl > Entrez > unique previous symbol > unique alias symbol",
-    duplicate_rule = "sum raw counts for source features mapping to the same approved HGNC symbol",
-    unmapped_rule = "retain in source object only; exclude from cross-cohort human integration"
-  )
-
-  out_path <- file.path(object_dir, paste0(dataset_name, "_HGNC_harmonized.qs"))
-  detected_cores <- parallel::detectCores()
-  if (is.na(detected_cores) || detected_cores < 1L) detected_cores <- 1L
-  nthreads <- max(1L, min(8L, detected_cores))
-  expected_cells <- ncol(hobj)
-  expected_features <- nrow(hobj)
-  qs::qsave(hobj, out_path, preset = "high", check_hash = TRUE, nthreads = nthreads)
-
-  # Free the source and newly materialised matrices before reload validation.
-  # This is important for nature_xue and avoids holding two full Seurat objects
-  # plus the validation copy in RAM at the same time.
-  rm(obj, counts, md, hcounts, hobj)
-  gc(verbose = FALSE)
-
-  chk <- qs::qread(out_path, use_alt_rep = FALSE, nthreads = nthreads)
-  if (!inherits(chk, "Seurat")) stop("Reload failed for ", dataset_name)
-  if (ncol(chk) != expected_cells) stop("Cell count changed after harmonisation: ", dataset_name)
-  if (nrow(chk) != expected_features) stop("Feature count changed after harmonisation: ", dataset_name)
-  if (anyDuplicated(rownames(chk))) stop("Duplicate harmonised features after reload: ", dataset_name)
-  if (!all(rownames(chk) %in% hgnc$symbol)) stop("Non-HGNC feature found in harmonised object: ", dataset_name)
-
-  object_rows[[dataset_name]] <- data.table(
-    dataset = dataset_name,
-    source_object = source_path,
-    harmonised_object = out_path,
-    n_cells = ncol(chk),
-    n_features_hgnc = nrow(chk),
-    file_size_bytes = file.info(out_path)$size,
-    validation = "VALIDATED"
-  )
-
-  rm(chk, mp)
+  rm(o, mp)
   gc(verbose = FALSE)
 }
-
-mapping_dt <- rbindlist(mapping_list, use.names = TRUE, fill = TRUE)
-audit_dt <- rbindlist(audit_rows, use.names = TRUE, fill = TRUE)
-object_dt <- rbindlist(object_rows, use.names = TRUE, fill = TRUE)
-presence_long <- rbindlist(presence_list, use.names = TRUE)
-
+presence_long <- rbindlist(presence_list)
 presence <- dcast(
   unique(presence_long)[, present := TRUE],
   canonical_symbol ~ dataset,
   value.var = "present",
   fill = FALSE
 )
-dataset_cols <- intersect(expected_datasets, names(presence))
-presence[, n_datasets := rowSums(.SD), .SDcols = dataset_cols]
+presence[, n_datasets := rowSums(.SD), .SDcols = expected_datasets]
 setcolorder(presence, c("canonical_symbol", "n_datasets", expected_datasets))
 setorder(presence, -n_datasets, canonical_symbol)
-
 shared8 <- presence[n_datasets == 8L, canonical_symbol]
-shared7plus <- presence[n_datasets >= 7L, canonical_symbol]
+shared7 <- presence[n_datasets >= 7L, canonical_symbol]
+if (length(shared8) < 10000L) stop("Unexpectedly small strict 8/8 HGNC set: ", length(shared8))
 
-if (length(shared8) < 10000L) {
-  stop("Strict 8/8 HGNC shared feature set unexpectedly small: ", length(shared8))
-}
-
-pairwise <- rbindlist(lapply(seq_along(expected_datasets), function(i) {
-  rbindlist(lapply(seq_along(expected_datasets), function(j) {
-    a <- expected_datasets[[i]]
-    b <- expected_datasets[[j]]
-    data.table(
-      dataset_1 = a,
-      dataset_2 = b,
-      shared_hgnc_symbols = sum(presence[[a]] & presence[[b]])
-    )
-  }))
-}))
-
-fwrite(mapping_dt, file.path(results_dir, "task004c_feature_mapping.csv"))
-fwrite(audit_dt, file.path(results_dir, "task004c_feature_audit_by_cohort.csv"))
+fwrite(rbindlist(cohort_audit), file.path(results_dir, "task004c_feature_audit_by_cohort.csv"))
 fwrite(presence, file.path(results_dir, "task004c_hgnc_feature_presence.csv"))
-fwrite(pairwise, file.path(results_dir, "task004c_pairwise_feature_overlap.csv"))
-fwrite(object_dt, file.path(results_dir, "task004c_harmonized_objects.csv"))
 writeLines(shared8, file.path(results_dir, "task004c_shared_hgnc_features_8of8.txt"))
-writeLines(shared7plus, file.path(results_dir, "task004c_shared_hgnc_features_7plus.txt"))
-status_counts <- mapping_dt[, .N, by = .(dataset, mapping_status)]
-fwrite(status_counts, file.path(results_dir, "task004c_mapping_status_counts.csv"))
+writeLines(shared7, file.path(results_dir, "task004c_shared_hgnc_features_7plus.txt"))
 
-report <- c(
-  "# Task 004c report - HGNC feature harmonisation",
-  "",
-  "## Status",
-  "",
-  "COMPLETED",
-  "",
-  "## Strategy",
-  "",
-  "- Source Task 004/004b objects were not modified.",
-  "- Current HGNC complete-set data were downloaded and checksum-recorded.",
-  "- Mapping priority: approved HGNC symbol > Ensembl gene ID (version removed) > Entrez ID > unique previous symbol > unique alias symbol.",
-  "- Ambiguous aliases/previous symbols were not force-mapped.",
-  "- Source features mapping to the same approved HGNC symbol were collapsed by summing raw counts.",
-  "- Unmapped/custom/non-HGNC features remain available in source objects but are excluded from the cross-cohort human integration feature universe.",
-  "",
-  "## Summary",
-  "",
-  paste0("Strict HGNC shared genes present in all 8 cohorts: ", format(length(shared8), big.mark = ",")),
-  paste0("HGNC genes present in at least 7/8 cohorts: ", format(length(shared7plus), big.mark = ",")),
-  "",
-  "Task 005 remains paused pending review of the harmonisation audit."
+message("Writing harmonised merged QS: ", out_qs)
+qs::qsave(obj, out_qs, preset = "high", check_hash = TRUE, nthreads = 8L)
+
+expected_cells <- ncol(obj)
+expected_features <- nrow(obj)
+expected_cell_ids <- colnames(obj)
+rm(obj, assay, new_counts, new_chunks, aggregator, counts_layer)
+gc(verbose = FALSE)
+
+message("Reload-validating harmonised QS...")
+chk <- qs::qread(out_qs, use_alt_rep = FALSE, nthreads = 8L)
+if (!inherits(chk, "Seurat")) stop("Harmonised QS reload is not Seurat")
+if (ncol(chk) != expected_cells || nrow(chk) != expected_features) stop("Harmonised QS dimensions mismatch")
+if (!identical(colnames(chk), expected_cell_ids)) stop("Harmonised QS cell order changed")
+if (anyDuplicated(rownames(chk))) stop("Harmonised QS has duplicate gene symbols")
+if (!all(rownames(chk) %in% hgnc$symbol)) stop("Harmonised QS contains non-HGNC row names")
+if (!identical(SeuratObject::Layers(chk[["RNA"]]), "counts")) stop("Harmonised QS RNA layer mismatch")
+if (!inherits(chk[["RNA"]]@layers[["counts"]], "task004b_chunked_counts")) stop("Harmonised QS counts class mismatch")
+
+validation <- data.table(
+  status = "VALIDATED",
+  source_qs = source_qs,
+  harmonised_qs = out_qs,
+  qs_size_bytes = file.info(out_qs)$size,
+  n_cells = ncol(chk),
+  source_features = length(old_features),
+  hgnc_features = nrow(chk),
+  strict_shared_hgnc_8of8 = length(shared8),
+  shared_hgnc_7plus = length(shared7),
+  duplicated_gene_symbols = anyDuplicated(rownames(chk)),
+  old_total_counts = old_total_counts,
+  hgnc_total_counts = new_total_counts,
+  count_retention_fraction = new_total_counts / old_total_counts,
+  reference_sha256 = sha256
 )
-writeLines(report, report_path)
-message("Task 004c COMPLETED")
-message("Strict 8/8 shared HGNC symbols: ", length(shared8))
+fwrite(validation, file.path(results_dir, "task004c_qs_validation.csv"))
+message("Task 004c QS harmonisation VALIDATED")
