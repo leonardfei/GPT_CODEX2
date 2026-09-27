@@ -21,14 +21,16 @@ If Task 003 or Task 004 marks a cohort technically incompatible or blocked, do n
 ## Feature harmonisation prerequisite
 Use the validated merged HGNC object from Task 004c, not the 68,394-feature raw-union object, for cross-cohort normalization/HVG/integration.
 
-Primary analysis objects:
-- objects/HCC_TA_8datasets_merged_review_HGNC_v1.qs
-- objects/HCC_TA_8datasets_merged_review_HGNC_v1.h5ad
+Primary analysis objects after Task 004c:
+- objects/HCC_TA_8datasets_merged_review_v1.qs
+- objects/HCC_TA_8datasets_merged_review_v1.h5ad
+
+These existing paths are overwritten by Task 004c and will contain HGNC-standardised features after validation.
 
 Candidate integration feature universe:
 results/task004c_shared_hgnc_features_8of8.txt
 
-Select HVGs/integration features from this shared HGNC universe. Keep the original merged_review_v1 QS/H5AD as raw audit objects for cohort-specific, viral/custom-feature and provenance checks.
+Select HVGs/integration features from this shared HGNC universe. For raw-union/custom-feature provenance checks, use upstream cohort/source objects or the retained Task 004b checkpoint.
 
 Do not require eight separate harmonised cohort files; split or index the merged HGNC object by dataset as needed for integration.
 
