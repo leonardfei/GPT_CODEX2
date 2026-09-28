@@ -151,8 +151,13 @@ project_to_clusters <- function(counts_layer,global_idx,shared_genes,sketch,hvg,
   rownames(cent) <- clusters
   final_map <- setNames(cluster_table$final_label,cluster_table$cluster)
   conf_map <- setNames(cluster_table$final_confidence,cluster_table$cluster)
+  basis_map <- setNames(cluster_table$final_basis,cluster_table$cluster)
+  ref_label_map <- setNames(cluster_table$broad_reference_label,cluster_table$cluster)
+  ref_score_map <- setNames(cluster_table$broad_reference_score,cluster_table$cluster)
   ans_cluster <- character(length(global_idx)); ans_label <- character(length(global_idx))
-  ans_conf <- character(length(global_idx)); ans_margin <- numeric(length(global_idx))
+  ans_conf <- character(length(global_idx)); ans_basis <- character(length(global_idx))
+  ans_ref_label <- character(length(global_idx)); ans_ref_score <- numeric(length(global_idx))
+  ans_margin <- numeric(length(global_idx))
   for(a in seq(1,length(global_idx),by=block_n)){
     b <- min(length(global_idx),a+block_n-1L); gi <- global_idx[a:b]
     xs <- counts_layer[shared_genes,gi,drop=FALSE]; lib <- Matrix::colSums(xs)
@@ -168,12 +173,15 @@ project_to_clusters <- function(counts_layer,global_idx,shared_genes,sketch,hvg,
     second <- apply(d2b,1,min)
     cc <- rownames(cent)[best]
     ans_cluster[a:b] <- cc; ans_label[a:b] <- final_map[cc]; ans_conf[a:b] <- conf_map[cc]
+    ans_basis[a:b] <- basis_map[cc]; ans_ref_label[a:b] <- ref_label_map[cc]
+    ans_ref_score[a:b] <- as.numeric(ref_score_map[cc])
     ans_margin[a:b] <- (second-bestd)/pmax(second,1e-8)
     rm(xs,xh,nh,dense,pcs,d2,d2b); gc(verbose=FALSE)
   }
   data.table(global_index=global_idx,reference_cluster=ans_cluster,
              projected_label=ans_label,cluster_confidence=ans_conf,
-             projection_margin=ans_margin)
+             annotation_basis=ans_basis,reference_label=ans_ref_label,
+             reference_score=ans_ref_score,projection_margin=ans_margin)
 }
 
 if(!file.exists(source_qs)) stop("Filtered source QS not found: ",source_qs)
@@ -191,8 +199,10 @@ datasets <- unique(as.character(md$dataset))
 if(!"nature_xue"%in%datasets) stop("nature_xue reference dataset missing")
 
 new_label <- rep(NA_character_,nrow(md)); new_conf <- rep(NA_character_,nrow(md))
-new_cluster <- rep(NA_character_,nrow(md)); proj_margin <- rep(NA_real_,nrow(md))
-cluster_rows <- list(); count_rows <- list(); de_rows <- list()
+new_basis <- rep(NA_character_,nrow(md)); new_ref_label <- rep(NA_character_,nrow(md))
+new_ref_score <- rep(NA_real_,nrow(md)); new_cluster <- rep(NA_character_,nrow(md))
+proj_margin <- rep(NA_real_,nrow(md))
+cluster_rows <- list(); count_rows <- list(); de_rows <- list(); sketch_flags <- list()
 
 run_dataset <- function(dataset_name,is_reference=FALSE,reference_matrix=NULL,reference_labels=NULL){
   idx <- which(as.character(md$dataset)==dataset_name)
