@@ -397,8 +397,11 @@ run_dataset <- function(dataset_name,is_reference=FALSE,reference_matrix=NULL,re
   map_ref <- setNames(ct$broad_reference_label,ct$cluster)
   map_ref_score <- setNames(ct$broad_reference_score,ct$cluster)
   map_cycle <- setNames(ct$cycling_state,ct$cluster)
-  sk$broad_celltype_cluster <- map_final[as.character(Idents(sk))]
-  sk$broad_cycling_state <- map_cycle[as.character(Idents(sk))]
+  # The mapped vectors inherit cluster IDs as names; Seurat interprets names
+  # as cell IDs during metadata assignment and would reject them as non-overlap.
+  # Preserve the current cell order and assign these values without names.
+  sk$broad_celltype_cluster <- unname(map_final[as.character(Idents(sk))])
+  sk$broad_cycling_state <- unname(map_cycle[as.character(Idents(sk))])
   saveRDS(sk,file.path(sketch_dir,paste0(dataset_name,"_broad_reference.rds")),compress=FALSE)
 
   if(is_reference){
@@ -433,7 +436,7 @@ run_dataset <- function(dataset_name,is_reference=FALSE,reference_matrix=NULL,re
   new_ref_label[idx] <<- proj$reference_label
   new_ref_score[idx] <<- proj$reference_score
   new_cluster[idx] <<- proj$reference_cluster
-  if(!"cycling_state"%in%colnames(proj)) proj$cycling_state <- map_cycle[proj$reference_cluster]
+  if(!"cycling_state"%in%colnames(proj)) proj$cycling_state <- unname(map_cycle[proj$reference_cluster])
   cycling_state_global[idx] <<- proj$cycling_state
   proj_margin[idx] <<- proj$projection_margin
   count_rows[[dataset_name]] <<- data.table(
