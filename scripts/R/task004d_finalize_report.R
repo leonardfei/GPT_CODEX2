@@ -166,7 +166,7 @@ lines <- c(
   "- results/task004d_uncertain_clusters.csv",
   "- results/task004d_neutrophil_marker_coherence.csv",
   "- figures/task004d_scdblfinder_qc.pdf",
-  "- figures/task004e/task004d_broad_annotation_qc.pdf",
+  "- figures/task004d_broad_annotation_qc.pdf (required review copy; generated source: figures/task004e/task004d_broad_annotation_qc.pdf)",
   "",
   "## Deviations / errors",
   if(nrow(sample_high)) paste0(
