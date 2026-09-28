@@ -1,7 +1,7 @@
 # Project Status
 
 ## Current task
-Task 004d — per-sample scDblFinder filtering and corrected broad cell-type annotation — PENDING / APPROVED
+Task 004d — per-sample scDblFinder filtering and corrected broad cell-type annotation — READY TO EXECUTE
 
 Task 004c is COMPLETED:
 - 1,490,852 cells;
@@ -38,6 +38,17 @@ Phase C:
 
 Approved task specification:
 `tasks/task_004d.md`
+
+## Implementation readiness
+The canonical Task 004d implementation is now present in the control repository:
+- `scripts/R/task004d_scdblfinder_filter.R`
+- `scripts/R/task004e_broad_annotation.R`
+- `scripts/R/task004d_finalize_report.R`
+- `scripts/R/task004de_install_deps.R`
+- `scripts/bash/task004de_doublet_and_broad_annotation.sh`
+- `config/task004d_xue_author_to_broad.tsv`
+
+Static delimiter/quote checks passed for all implementation scripts. Server-side execution has not yet been recorded; Task 004d remains incomplete until the runtime outputs validate and the final report is committed.
 
 ## Next Codex command
 `Execute task_004d.`
