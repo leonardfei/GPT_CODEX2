@@ -57,6 +57,33 @@ options(repos = c(
   CRAN = "https://cloud.r-project.org"
 ))
 
+# Bioconductor 3.18's rtracklayer UCSC C sources are incompatible with the
+# server's Conda GCC 16 prototype diagnostics. Build this dependency separately
+# with Ubuntu's system GCC, then keep the normal project toolchain for others.
+if (!requireNamespace("rtracklayer", quietly = TRUE)) {
+  system_cc <- Sys.which("gcc")
+  if (!nzchar(system_cc)) stop("rtracklayer is missing and system gcc is unavailable")
+  makevars <- tempfile("task004d-system-gcc-", tmpdir = file.path(root, "tmp"))
+  writeLines(paste0("CC = ", system_cc), makevars)
+  old_makevars <- Sys.getenv("R_MAKEVARS_USER", unset = NA_character_)
+  Sys.setenv(R_MAKEVARS_USER = makevars)
+  tryCatch(
+    install.packages(
+      "rtracklayer", lib = lib,
+      dependencies = c("Depends", "Imports", "LinkingTo"),
+      Ncpus = 1L, quiet = FALSE
+    ),
+    finally = {
+      if (is.na(old_makevars)) Sys.unsetenv("R_MAKEVARS_USER") else
+        Sys.setenv(R_MAKEVARS_USER = old_makevars)
+      unlink(makevars)
+    }
+  )
+  if (!requireNamespace("rtracklayer", quietly = TRUE)) {
+    stop("rtracklayer did not install with the system GCC compatibility lane")
+  }
+}
+
 if (!requireNamespace("xgboost", quietly = TRUE) ||
     packageVersion("xgboost") < package_version("1.7.11.1")) {
   xgb_archive <- paste0(
