@@ -22,6 +22,18 @@ if(requireNamespace("xgboost",quietly=TRUE) &&
   stop("scDblFinder >=1.24.8 is required with xgboost >=3.1; found scDblFinder ",
        as.character(sdf_version)," and xgboost ",as.character(packageVersion("xgboost")))
 }
+sdf_has_dbr_per1k <- "dbr.per1k" %in% names(formals(scDblFinder::scDblFinder))
+scdblfinder_rate_args <- function(n_cells) {
+  if (sdf_has_dbr_per1k) {
+    list(dbr=NULL,dbr.per1k=0.008,dbr.sd=NULL)
+  } else {
+    # Legacy scDblFinder defines dbr as a fraction for the current capture.
+    # Scale the approved 0.8%-per-1,000-cells rate explicitly for this sample.
+    list(dbr=min(1,0.008*n_cells/1000),dbr.sd=NULL)
+  }
+}
+dbr_api_mode <- if(sdf_has_dbr_per1k) "native_dbr.per1k" else
+  "legacy_dbr_explicit_per_1000_equivalent"
 dir.create(dirname(out_qs),recursive=TRUE,showWarnings=FALSE)
 dir.create(results_dir,recursive=TRUE,showWarnings=FALSE)
 dir.create(dirname(report_path),recursive=TRUE,showWarnings=FALSE)
@@ -106,8 +118,10 @@ for(s in seq_along(capture_levels)){
   colnames(sce) <- base$cell_id
   set.seed(seed_base+s)
   cluster_mode <- if(n >= 500L) TRUE else NULL
-  sce <- scDblFinder(sce,clusters=cluster_mode,dbr=NULL,dbr.per1k=0.008,
-                     dbr.sd=NULL,iter=2,BPPARAM=SerialParam(),verbose=FALSE)
+  sce <- do.call(scDblFinder::scDblFinder,c(
+    list(sce,clusters=cluster_mode),scdblfinder_rate_args(n),
+    list(iter=2,BPPARAM=SerialParam(),verbose=FALSE)
+  ))
   cd <- as.data.frame(colData(sce))
   if(!all(c("scDblFinder.score","scDblFinder.class")%in%colnames(cd)))
     stop("Missing scDblFinder outputs for ",cap)
@@ -123,6 +137,7 @@ for(s in seq_along(capture_levels)){
   sample_list[[s]] <- data.table(project_sample_id=cap,dataset=base$dataset[[1]],
     sample_id=base$sample_id[[1]],tissue=base$tissue[[1]],n_cells=n,n_doublet=nd,
     n_singlet=n-nd,doublet_fraction=nd/n,expected_dbr=min(1,0.008*n/1000),
+    dbr_api_mode=dbr_api_mode,
     cluster_mode=ifelse(n>=500L,"cluster_based","random"),status="SCORED")
   calls_list[[s]] <- base
   rm(x,sce,cd,base); gc(verbose=FALSE)
@@ -250,13 +265,15 @@ names(obj@active.ident) <- new_cells
 obj@misc$task004d_scdblfinder <- list(
   source_qs=source_qs,version=as.character(packageVersion("scDblFinder")),
   detection_unit="project_sample_id",n_samples=length(capture_levels),
-  dbr="automatic",dbr_per1k=0.008,dbr_sd=NULL,iter=2,
+  dbr=if(sdf_has_dbr_per1k) "automatic" else "min(1, 0.008*n_cells/1000)",
+  dbr_per1k=0.008,dbr_api_mode=dbr_api_mode,dbr_sd=NULL,iter=2,
   cluster_rule="clusters=TRUE for n>=500; clusters=NULL for n<500",
   seed_base=seed_base,n_cells_before=n_before,
   n_doublets_removed=n_removed,n_cells_after=n_after,
   preliminary_neutrophils_before=neut_before,
   preliminary_neutrophils_removed=neut_removed,
-  preliminary_neutrophil_retention=neut_ret
+  preliminary_neutrophil_retention=neut_ret,
+  scDblFinder_rate_api=dbr_api_mode
 )
 ds <- calls[,.(n_cells_before=.N,n_doublet=sum(scDblFinder.class=="doublet",na.rm=TRUE),
   n_singlet=sum(scDblFinder.class=="singlet",na.rm=TRUE),
@@ -299,7 +316,8 @@ val <- data.table(status="VALIDATED",source_qs=source_qs,filtered_qs=out_qs,
   preliminary_neutrophils_before=neut_before,
   preliminary_neutrophils_removed=neut_removed,
   preliminary_neutrophil_retention=neut_ret,
-  scDblFinder_version=as.character(sdf_version))
+  scDblFinder_version=as.character(sdf_version),
+  scDblFinder_rate_api=dbr_api_mode,dbr_per1k=0.008)
 fwrite(val,file.path(results_dir,"task004d_scdblfinder_validation.csv"))
 writeLines(c("# Task 004d report - scDblFinder",
   "","## Status","COMPLETED","",
@@ -310,6 +328,8 @@ writeLines(c("# Task 004d report - scDblFinder",
   paste0("Preliminary neutrophil retention: ",
          ifelse(is.na(neut_ret),"NA",sprintf("%.3f%%",100*neut_ret))),
   "","Detection was performed independently by project_sample_id on raw counts.",
+  if(sdf_has_dbr_per1k) "Expected rate parameter: dbr.per1k=0.008." else
+    "Expected rate parameter: legacy explicit dbr=min(1, 0.008*n_cells/1000), equivalent to 0.8% per 1,000 cells.",
   "Preliminary Task 004 labels were used only for retention auditing."),
   report_path)
 message("Task 004d COMPLETED")

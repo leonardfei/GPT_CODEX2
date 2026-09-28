@@ -94,7 +94,10 @@ lines <- c(
   "## scDblFinder",
   paste0("- scDblFinder version: ",dval$scDblFinder_version[[1]],"."),
   "- Detection unit: each project_sample_id independently.",
-  "- Parameters: dbr=NULL, dbr.per1k=0.008, dbr.sd=NULL, iter=2, SerialParam().",
+  if ("scDblFinder_rate_api" %in% names(dval) &&
+      dval$scDblFinder_rate_api[[1]]=="legacy_dbr_explicit_per_1000_equivalent")
+    "- Rate API compatibility: this scDblFinder release lacks dbr.per1k; per sample it received the explicit equivalent dbr=min(1, 0.008*n_cells/1000), preserving the approved 0.8%-per-1,000-cells expectation (not the package default). dbr.sd=NULL, iter=2, SerialParam()."
+  else "- Parameters: dbr=NULL, dbr.per1k=0.008, dbr.sd=NULL, iter=2, SerialParam().",
   "- Samples with >=500 cells used cluster-based mode; smaller samples used random artificial-doublet mode.",
   "- Seeds: 44000 + sample_index.",
   paste0("- Cells before: ",fmt(dval$n_cells_before[[1]]),"."),

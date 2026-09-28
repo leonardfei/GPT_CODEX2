@@ -122,6 +122,20 @@ for (pkg in c(required, "xgboost")) {
   cat(pkg, " ", as.character(packageVersion(pkg)), "\n", sep = "")
 }
 
+sdf_has_dbr_per1k <- "dbr.per1k" %in% names(formals(scDblFinder::scDblFinder))
+scdblfinder_rate_args <- function(n_cells) {
+  if (sdf_has_dbr_per1k) {
+    list(dbr = NULL, dbr.per1k = 0.008, dbr.sd = NULL)
+  } else {
+    # scDblFinder 1.16 documents dbr as the expected fraction for the
+    # current capture. This is the explicit equivalent of 0.8% per 1,000.
+    list(dbr = min(1, 0.008 * n_cells / 1000), dbr.sd = NULL)
+  }
+}
+cat("scDblFinder rate API: ",
+    if (sdf_has_dbr_per1k) "native dbr.per1k=0.008" else
+      "legacy dbr=min(1, 0.008*n_cells/1000)", "\n", sep = "")
+
 # Smoke-test both approved scDblFinder modes before loading the project object.
 suppressPackageStartupMessages({
   library(Matrix)
@@ -136,22 +150,22 @@ smoke_counts <- Matrix::Matrix(
 colnames(smoke_counts) <- paste0("smoke_", seq_len(ncol(smoke_counts)))
 rownames(smoke_counts) <- paste0("gene_", seq_len(nrow(smoke_counts)))
 sce <- SingleCellExperiment(assays = list(counts = smoke_counts))
-sce <- scDblFinder::scDblFinder(
-  sce, clusters = TRUE, dbr = NULL, dbr.per1k = 0.008, dbr.sd = NULL,
-  iter = 2, BPPARAM = BiocParallel::SerialParam(), verbose = FALSE,
-  nfeatures = 1352, dims = 20
-)
+sce <- do.call(scDblFinder::scDblFinder, c(
+  list(sce, clusters = TRUE), scdblfinder_rate_args(ncol(sce)),
+  list(iter = 2, BPPARAM = BiocParallel::SerialParam(), verbose = FALSE,
+       nfeatures = 1352, dims = 20)
+))
 stopifnot(all(c("scDblFinder.score", "scDblFinder.class") %in%
                 colnames(SummarizedExperiment::colData(sce))))
 cat("Cluster-mode smoke test: PASSED\n")
 
 set.seed(40401)
 sce_small <- SingleCellExperiment(assays = list(counts = smoke_counts[, seq_len(250L), drop = FALSE]))
-sce_small <- scDblFinder::scDblFinder(
-  sce_small, clusters = NULL, dbr = NULL, dbr.per1k = 0.008, dbr.sd = NULL,
-  iter = 2, BPPARAM = BiocParallel::SerialParam(), verbose = FALSE,
-  nfeatures = 1352, dims = 20
-)
+sce_small <- do.call(scDblFinder::scDblFinder, c(
+  list(sce_small, clusters = NULL), scdblfinder_rate_args(ncol(sce_small)),
+  list(iter = 2, BPPARAM = BiocParallel::SerialParam(), verbose = FALSE,
+       nfeatures = 1352, dims = 20)
+))
 stopifnot(all(c("scDblFinder.score", "scDblFinder.class") %in%
                 colnames(SummarizedExperiment::colData(sce_small))))
 cat("Random-mode smoke test: PASSED\n")
