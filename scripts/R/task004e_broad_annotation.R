@@ -371,57 +371,172 @@ run_dataset <- function(dataset_name,is_reference=FALSE,reference_matrix=NULL,re
   list(reference_matrix=reference_matrix,reference_labels=reference_labels)
 }
 
+pdf(file.path(fig_dir,"task004d_broad_annotation_qc.pdf"),width=12,height=9,onefile=TRUE)
 message("Building nature_xue reference")
 ref <- run_dataset("nature_xue",TRUE)
 xue_ref <- ref$reference_matrix; xue_ref_labels <- ref$reference_labels
-if(is.null(xue_ref)||ncol(xue_ref)<2) stop("Failed to build nature_xue reference")
-for(d in setdiff(datasets,"nature_xue")){
-  message("Annotating ",d); run_dataset(d,FALSE,xue_ref,xue_ref_labels); gc(verbose=FALSE)
+if(is.null(xue_ref)||ncol(xue_ref)<2) {
+  dev.off()
+  stop("Failed to build nature_xue reference")
 }
+for(d in setdiff(datasets,"nature_xue")){
+  message("Annotating ",d)
+  run_dataset(d,FALSE,xue_ref,xue_ref_labels)
+  gc(verbose=FALSE)
+}
+dev.off()
 
 if(any(is.na(new_label))) stop("Some cells lack broad annotation")
-old_prelim <- if("project_broad_celltype"%in%colnames(md)) as.character(md$project_broad_celltype) else rep(NA_character_,nrow(md))
-obj$task004_preliminary_broad_celltype <- old_prelim
-obj$project_broad_celltype_v2 <- new_label
-obj$broad_annotation_confidence_v2 <- new_conf
-obj$broad_reference_cluster_v2 <- new_cluster
-obj$broad_projection_margin_v2 <- proj_margin
-obj$annotation_status_v2 <- "task004e_cluster_reference_annotation"
-obj@misc$task004e_broad_annotation <- list(
-  source_qs=source_qs,shared_feature_file=shared_file,n_shared_genes=length(shared_genes),
-  sketch_cells_per_dataset=sketch_n,projection_block=block_n,resolution=resolution,
-  reference_dataset="nature_xue",reference_source="source_author_annotation",
-  method="dataset-stratified sketch clustering + cluster markers + nature_xue reference transfer + PCA-centroid projection",
-  seed=seed)
+valid_labels <- c("Hepatocyte/Epithelial","T_cell","NK_cell","B_cell","Plasma_cell",
+                  "Monocyte/Macrophage","Neutrophil","Dendritic_cell","Mast_cell",
+                  "Endothelial","Fibroblast/Mesenchymal","Uncertain/Mixed")
+if(any(!new_label%in%valid_labels))
+  stop("Unexpected broad label(s): ",paste(setdiff(unique(new_label),valid_labels),collapse=", "))
 
-all_clusters <- rbindlist(cluster_rows,fill=TRUE); all_counts <- rbindlist(count_rows,fill=TRUE)
-fwrite(all_clusters,file.path(results_dir,"task004e_broad_cluster_annotations.csv"))
-fwrite(all_counts,file.path(results_dir,"task004e_broad_cell_counts.csv"))
-if(length(de_rows)) fwrite(rbindlist(de_rows,fill=TRUE),file.path(results_dir,"task004e_sketch_cluster_markers.csv.gz"),compress="gzip")
-cross <- data.table(dataset=as.character(md$dataset),old=old_prelim,new=new_label)[,
-  .(n_cells=.N),by=.(dataset,old,new)]
-fwrite(cross,file.path(results_dir,"task004e_old_vs_new_broad_crosswalk.csv"))
+old_prelim <- if("project_broad_celltype"%in%colnames(md)) {
+  as.character(md$project_broad_celltype)
+} else rep(NA_character_,nrow(md))
+
+obj$task004_preliminary_label <- old_prelim
+obj$broad_celltype_v2 <- new_label
+obj$broad_annotation_confidence <- new_conf
+obj$broad_annotation_basis <- new_basis
+obj$broad_cluster_id <- new_cluster
+obj$broad_cluster_resolution <- "0.8"
+obj$broad_reference_label <- new_ref_label
+obj$broad_reference_score <- new_ref_score
+obj$broad_projection_margin <- proj_margin
+obj$annotation_status <- "task004d_broad_annotation_v2"
+obj@misc$task004d_broad_annotation <- list(
+  source_qs=source_qs,
+  shared_feature_file=shared_file,
+  xue_author_crosswalk=xue_map_file,
+  n_shared_genes=length(shared_genes),
+  sketch_threshold_cells=250000L,
+  sketch_target_cells=sketch_n,
+  projection_block=block_n,
+  cluster_resolutions=c(0.4,0.8),
+  annotation_resolution=0.8,
+  reference_dataset="nature_xue",
+  reference_source="source_author_annotation",
+  method=paste(
+    "within-dataset LogNormalize/HVG/PCA/clustering;",
+    "cluster markers + canonical lineage programs;",
+    "Xue author-label pseudobulk SingleR reference;",
+    "50k sketch only when dataset >250k cells, with PCA-centroid projection"
+  ),
+  seed=seed
+)
+
+all_clusters <- rbindlist(cluster_rows,fill=TRUE,use.names=TRUE)
+all_counts <- rbindlist(count_rows,fill=TRUE,use.names=TRUE)
+sketch_summary <- rbindlist(sketch_flags,fill=TRUE,use.names=TRUE)
+
+all_counts[,dataset_tissue_total:=sum(n_cells),by=.(dataset,tissue)]
+all_counts[,fraction_within_dataset_tissue:=n_cells/pmax(dataset_tissue_total,1)]
+all_counts[,dataset_total:=sum(n_cells),by=dataset]
+all_counts[,fraction_within_dataset:=n_cells/pmax(dataset_total,1)]
+fwrite(all_counts,file.path(results_dir,"task004d_broad_celltype_counts.csv"))
+fwrite(all_clusters,file.path(results_dir,"task004d_cluster_annotation.csv"))
+fwrite(sketch_summary,file.path(results_dir,"task004d_sketch_usage.csv"))
+if(length(de_rows)){
+  markers_all <- rbindlist(de_rows,fill=TRUE,use.names=TRUE)
+  fwrite(markers_all,file.path(results_dir,"task004d_cluster_markers.csv.gz"),compress="gzip")
+}
+
+uncertain <- all_clusters[final_label=="Uncertain/Mixed"]
+fwrite(uncertain,file.path(results_dir,"task004d_uncertain_clusters.csv"))
+
+old_cross <- data.table(
+  dataset=as.character(md$dataset),
+  task004_preliminary_label=old_prelim,
+  broad_celltype_v2=new_label
+)[,.(
+  n_cells=.N
+),by=.(dataset,task004_preliminary_label,broad_celltype_v2)]
+fwrite(old_cross,file.path(results_dir,"task004d_task004_vs_v2.csv"))
+
+xue_idx <- which(as.character(md$dataset)=="nature_xue")
+xue_author <- if("source_author_annotation"%in%colnames(md)) {
+  as.character(md$source_author_annotation[xue_idx])
+} else rep(NA_character_,length(xue_idx))
+xue_author_broad <- map_author_broad(xue_author)
+xue_cross <- data.table(
+  source_author_annotation=xue_author,
+  source_author_broad=xue_author_broad,
+  broad_celltype_v2=new_label[xue_idx]
+)[,.(
+  n_cells=.N
+),by=.(source_author_annotation,source_author_broad,broad_celltype_v2)]
+xue_cross[,author_label_total:=sum(n_cells),by=source_author_annotation]
+xue_cross[,fraction_within_author_label:=n_cells/pmax(author_label_total,1)]
+fwrite(xue_cross,file.path(results_dir,"task004d_xue_author_vs_v2.csv"))
+
+neut_cluster_audit <- all_clusters[
+  marker_label=="Neutrophil" | final_label=="Neutrophil" |
+    (!is.na(anchor_label)&anchor_label=="Neutrophil") |
+    (!is.na(broad_reference_label)&broad_reference_label=="Neutrophil")
+]
+fwrite(neut_cluster_audit,file.path(results_dir,"task004d_neutrophil_marker_coherence.csv"))
 
 message("Writing ",out_qs)
 qs::qsave(obj,out_qs,preset="high",check_hash=TRUE,nthreads=8L)
-expected_n <- ncol(obj); expected_ids <- colnames(obj)
+expected_n <- ncol(obj); expected_ids <- colnames(obj); expected_features <- nrow(obj)
 rm(obj); gc(verbose=FALSE)
+
 chk <- qs::qread(out_qs,use_alt_rep=FALSE,nthreads=8L)
-if(ncol(chk)!=expected_n||!identical(colnames(chk),expected_ids)) stop("Annotated QS validation failed")
-if(any(is.na(chk$project_broad_celltype_v2))) stop("Missing v2 broad labels")
-val <- data.table(status="VALIDATED",source_qs=source_qs,annotated_qs=out_qs,
-  n_cells=ncol(chk),n_features=nrow(chk),n_datasets=uniqueN(chk$dataset),
-  n_broad_types=uniqueN(chk$project_broad_celltype_v2),
-  n_uncertain=sum(chk$project_broad_celltype_v2=="Other/uncertain"),
-  uncertain_fraction=mean(chk$project_broad_celltype_v2=="Other/uncertain"))
-fwrite(val,file.path(results_dir,"task004e_broad_annotation_validation.csv"))
-writeLines(c("# Task 004e report - broad cell annotation","",
-  "## Status","COMPLETED","",
-  paste0("Cells annotated: ",format(ncol(chk),big.mark=",")),
-  paste0("Broad labels: ",uniqueN(chk$project_broad_celltype_v2)),
-  paste0("Other/uncertain: ",format(sum(chk$project_broad_celltype_v2=="Other/uncertain"),big.mark=","),
-         " (",sprintf("%.2f%%",100*mean(chk$project_broad_celltype_v2=="Other/uncertain")),")"),
-  "","Annotation used dataset-specific sketch PCA/clustering, cluster markers, nature_xue author-label reference transfer, and PCA-centroid projection to all retained singlets.",
-  "Previous Task 004 labels are preserved separately and were not used as the reference."),
-  report_path)
-message("Task 004e COMPLETED")
+if(ncol(chk)!=expected_n||nrow(chk)!=expected_features||!identical(colnames(chk),expected_ids))
+  stop("Annotated QS validation failed")
+if(any(is.na(chk$broad_celltype_v2))) stop("Missing v2 broad labels after reload")
+if(any(as.character(chk$scDblFinder.class)=="doublet"))
+  stop("Doublet detected in final singlet broad object")
+if(any(!as.character(chk$broad_celltype_v2)%in%valid_labels))
+  stop("Invalid final broad labels after reload")
+
+n_uncertain <- sum(as.character(chk$broad_celltype_v2)=="Uncertain/Mixed")
+uncertain_fraction <- n_uncertain/ncol(chk)
+xue_match <- xue_cross[source_author_broad!="Uncertain/Mixed",
+  sum(n_cells[source_author_broad==broad_celltype_v2])/sum(n_cells)]
+if(!length(xue_match)||!is.finite(xue_match)) xue_match <- NA_real_
+
+val <- data.table(
+  status="VALIDATED",
+  source_qs=source_qs,
+  annotated_qs=out_qs,
+  n_cells=ncol(chk),
+  n_features=nrow(chk),
+  n_datasets=uniqueN(chk$dataset),
+  n_broad_types=uniqueN(chk$broad_celltype_v2),
+  n_uncertain=n_uncertain,
+  uncertain_fraction=uncertain_fraction,
+  xue_author_broad_concordance=xue_match,
+  any_doublet_remaining=any(as.character(chk$scDblFinder.class)=="doublet"),
+  sketch_datasets=paste(sketch_summary[used_sketch==TRUE,dataset],collapse=";")
+)
+fwrite(val,file.path(results_dir,"task004d_broad_annotation_validation.csv"))
+
+writeLines(c(
+  "# Task 004d broad-annotation stage report",
+  "",
+  "## Status",
+  "COMPLETED",
+  "",
+  paste0("- Cells annotated: ",format(ncol(chk),big.mark=",")),
+  paste0("- Features retained: ",format(nrow(chk),big.mark=",")),
+  paste0("- Broad classes represented: ",uniqueN(chk$broad_celltype_v2)),
+  paste0("- Uncertain/Mixed: ",format(n_uncertain,big.mark=","),
+         " (",sprintf("%.2f%%",100*uncertain_fraction),")"),
+  paste0("- Xue author broad-label concordance (excluding unmapped author labels): ",
+         ifelse(is.na(xue_match),"NA",sprintf("%.2f%%",100*xue_match))),
+  paste0("- Sketch used for: ",
+         ifelse(any(sketch_summary$used_sketch),
+                paste(sketch_summary[used_sketch==TRUE,dataset],collapse=", "),
+                "none")),
+  "",
+  "Within-dataset broad annotation used LogNormalize, shared-HGNC HVGs, 30-PC PCA,",
+  "0.4/0.8 clustering sensitivity, canonical cluster-marker programs and Xue",
+  "author-label reference transfer. Resolution 0.8 was used for the working partition.",
+  "No malignant-cell call and no cross-dataset batch integration were performed."
+),report_path)
+
+message("Task 004d broad annotation stage COMPLETED")
