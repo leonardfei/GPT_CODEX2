@@ -69,17 +69,29 @@ map_author_broad <- function(x){
     z <- is.na(out)&!is.na(y)&grepl(pattern,y,perl=TRUE)
     out[z] <<- label
   }
-  put("neut|(^|[_ -])neu([_ -]|$)|fcgr3b|cxcr2","Neutrophil")
+  # Exact Xue et al. source-prefix anchors first.
+  put("^neu_","Neutrophil")
+  put("^mph_|^mo_|^mono-like_","Monocyte/macrophage")
+  put("^dc_|^monodc$","Dendritic")
+  put("^ec_","Endothelial")
+  put("^fb_|^mu_","Fibroblast/mesenchymal")
+  put("^b_03_mzb1$","Plasma")
+  put("^b_","B")
+  put("^cd4t_|^cd8t_|^nk_|^gdt_","T/NK")
+  put("^mast$","Mast")
+  put("^tumor$","Tumor/epithelial")
+  # Generic fallbacks for future/alternate author labels.
+  put("neut|fcgr3b|cxcr2","Neutrophil")
   put("mast|tpsab|tpsb","Mast")
   put("plasma|plasmablast|jchain|mzb1","Plasma")
-  put("dend|(^|[_ -])dc([_ -]|$)|cdc|pdc|clec9a|fcer1a","Dendritic")
-  put("macro|monocyte|mono_|tam|kupffer|c1qa|spp1.*mac","Monocyte/macrophage")
-  put("endothel|(^|[_ -])ec([_ -]|$)|vascular|sinusoid|plvap","Endothelial")
+  put("dend|cdc|pdc|clec9a|fcer1a","Dendritic")
+  put("macro|monocyte|tam|kupffer|c1qa|spp1.*mac","Monocyte/macrophage")
+  put("endothel|vascular|sinusoid|plvap","Endothelial")
   put("fibro|caf|stellate|mesench|pericy|rgs5|col1a1","Fibroblast/mesenchymal")
-  put("(^b_|b cell|b-cell|naive b|memory b|ms4a1|cd79a)","B")
-  put("cd4|cd8|treg|trm|tex|tem|t cell|t-cell|(^t_)|(^nk)|nkt|natural killer","T/NK")
+  put("b cell|b-cell|naive b|memory b|ms4a1|cd79a","B")
+  put("cd4|cd8|treg|trm|tex|tem|t cell|t-cell|nkt|natural killer","T/NK")
   put("eryth|rbc|red blood|hba1|hbb","Erythroid")
-  put("tumou?r|malignant|cancer|hepatocyte|epithelial|cholangi|(^ca_)|hcc","Tumor/epithelial")
+  put("tumou?r|malignant|cancer|hepatocyte|epithelial|cholangi|hcc","Tumor/epithelial")
   out
 }
 
