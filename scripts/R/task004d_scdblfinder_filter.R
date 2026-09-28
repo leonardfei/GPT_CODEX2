@@ -74,15 +74,6 @@ for(s in seq_along(capture_levels)){
     dataset=as.character(md$dataset[idx]),sample_id=as.character(md$sample_id[idx]),
     patient_id=as.character(md$patient_id[idx]),tissue=as.character(md$tissue[idx]),
     project_sample_id=cap)
-  if(n<min_cells){
-    base[,c("scDblFinder.score","scDblFinder.class","scDblFinder.status") :=
-      list(NA_real_,"singlet_unscored_small_sample","UNSCORED_SMALL_SAMPLE")]
-    calls_list[[s]] <- base
-    sample_list[[s]] <- data.table(project_sample_id=cap,dataset=base$dataset[[1]],
-      sample_id=base$sample_id[[1]],n_cells=n,n_doublet=0L,doublet_fraction=0,
-      expected_dbr=NA_real_,status="UNSCORED_SMALL_SAMPLE")
-    next
-  }
   x <- counts_layer[,idx,drop=FALSE]
   if(!inherits(x,"dgCMatrix")) x <- as(x,"dgCMatrix")
   if(any(Matrix::colSums(x)<=0)) stop("Zero-count cell in ",cap)
@@ -90,8 +81,9 @@ for(s in seq_along(capture_levels)){
   sce <- SingleCellExperiment(assays=list(counts=x))
   colnames(sce) <- base$cell_id
   set.seed(seed_base+s)
-  sce <- scDblFinder(sce,clusters=NULL,dbr=NULL,dbr.per1k=0.008,
-                     nfeatures=1352,dims=20,BPPARAM=SerialParam(),verbose=FALSE)
+  cluster_mode <- if(n >= 500L) TRUE else NULL
+  sce <- scDblFinder(sce,clusters=cluster_mode,dbr=NULL,dbr.per1k=0.008,
+                     dbr.sd=NULL,iter=2,BPPARAM=SerialParam(),verbose=FALSE)
   cd <- as.data.frame(colData(sce))
   if(!all(c("scDblFinder.score","scDblFinder.class")%in%colnames(cd)))
     stop("Missing scDblFinder outputs for ",cap)
@@ -105,8 +97,9 @@ for(s in seq_along(capture_levels)){
   }
   nd <- sum(base$scDblFinder.class=="doublet",na.rm=TRUE)
   sample_list[[s]] <- data.table(project_sample_id=cap,dataset=base$dataset[[1]],
-    sample_id=base$sample_id[[1]],n_cells=n,n_doublet=nd,doublet_fraction=nd/n,
-    expected_dbr=min(1,0.008*n/1000),status="SCORED")
+    sample_id=base$sample_id[[1]],tissue=base$tissue[[1]],n_cells=n,n_doublet=nd,
+    n_singlet=n-nd,doublet_fraction=nd/n,expected_dbr=min(1,0.008*n/1000),
+    cluster_mode=ifelse(n>=500L,"cluster_based","random"),status="SCORED")
   calls_list[[s]] <- base
   rm(x,sce,cd,base); gc(verbose=FALSE)
 }
