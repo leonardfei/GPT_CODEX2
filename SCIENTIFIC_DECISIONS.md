@@ -101,6 +101,17 @@ If multiple source rows map to the same approved HGNC symbol, raw counts are sum
 
 Task 005 uses the overwritten merged v1 HGNC-standardised objects and selects integration features from HGNC-harmonised genes shared across all eight cohorts. Separate harmonised cohort files are not required.
 
+## D015 — Doublet filtering and corrected broad annotation
+Before Task 005 integration, the HGNC-harmonised eight-cohort merged object must undergo project-level computational doublet detection.
+
+Doublet detection is performed with scDblFinder independently for each `project_sample_id`, treated as the independent capture/library unit. Raw counts are used. The expected-rate parameter is set explicitly to `dbr.per1k=0.008`; predicted doublets are removed only according to the final `scDblFinder.class` call. No additional nCount/nFeature hard doublet cutoff is added.
+
+The preliminary Task 004 per-cell marker-score annotation is not accepted as the final working broad annotation. After doublet filtering, broad annotation is redone using standard within-dataset normalization/PCA/clustering, cluster-level marker evidence, coherent canonical lineage programs, and Xue author labels as a reference anchor. Ambiguous or mixed-lineage clusters remain `Uncertain/Mixed` rather than being forced into a lineage.
+
+Final broad classes are: Hepatocyte/Epithelial, T_cell, NK_cell, B_cell, Plasma_cell, Monocyte/Macrophage, Neutrophil, Dendritic_cell, Mast_cell, Endothelial, Fibroblast/Mesenchymal, and Uncertain/Mixed.
+
+No malignant-cell call or cross-dataset batch integration is performed in Task 004d. Task 005 remains blocked until Task 004d is reviewed.
+
 ## Decision log
 - 2026-09-23: D001–D007 initialized.
 - 2026-09-24: original five-cohort phase-1 set defined; GSE202642/GSE290298 held.
@@ -109,3 +120,4 @@ Task 005 uses the overwritten merged v1 HGNC-standardised objects and selects in
 - 2026-09-24: D012 added after Task 003 review to correct nature_xue patient/pairing metadata and set CRA002308 abundance eligibility to CONDITIONAL.
 - 2026-09-25: D013 added at user request to create an eight-cohort unintegrated merge object for manual annotation review before final annotation correction/integration.
 - 2026-09-27: D014 added to standardise cross-cohort human features to current HGNC-approved symbols before Task 005.
+- 2026-09-28: D015 added to require per-sample scDblFinder filtering and corrected cluster-based broad annotation before Task 005.
