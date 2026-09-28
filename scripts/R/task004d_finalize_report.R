@@ -98,6 +98,9 @@ lines <- c(
       dval$scDblFinder_rate_api[[1]]=="legacy_dbr_explicit_per_1000_equivalent")
     "- Rate API compatibility: this scDblFinder release lacks dbr.per1k; per sample it received the explicit equivalent dbr=min(1, 0.008*n_cells/1000), preserving the approved 0.8%-per-1,000-cells expectation (not the package default). dbr.sd=NULL, iter=2, SerialParam()."
   else "- Parameters: dbr=NULL, dbr.per1k=0.008, dbr.sd=NULL, iter=2, SerialParam().",
+  if("scDblFinder_calls_reused"%in%names(dval) && isTRUE(dval$scDblFinder_calls_reused[[1]]))
+    "- Resume record: all-cell calls from the preceding 194-capture scoring pass were reused only after validating cell order, capture/sample identifiers, score completeness, package-rate API, and per-sample expected rates; models were not recomputed."
+  else "- Resume record: all 194 capture-level models were scored during this execution.",
   "- Samples with >=500 cells used cluster-based mode; smaller samples used random artificial-doublet mode.",
   "- Seeds: 44000 + sample_index.",
   paste0("- Cells before: ",fmt(dval$n_cells_before[[1]]),"."),
@@ -157,6 +160,7 @@ lines <- c(
     "Doublet-rate review flags were retained for inspection and did not trigger threshold retuning: ",
     paste(sample_high$project_sample_id,collapse=", "),"."
   ) else "No sample-level doublet-rate review flag was triggered.",
+  "Resolved runtime issues: the server's scDblFinder 1.16 API required the explicit legacy expected-rate equivalent; the initial Seurat accessor check and post-filter data.table row selection were corrected. The first complete scoring pass was preserved and validated for resume.",
   "No secondary UMI/nFeature doublet cutoff was used. No predicted doublet was rescued because of a preliminary cell-type label.",
   "",
   "## Hold point",

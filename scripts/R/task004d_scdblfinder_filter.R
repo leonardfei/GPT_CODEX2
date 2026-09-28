@@ -95,6 +95,49 @@ capture_ids <- as.character(md$project_sample_id)
 capture_levels <- unique(capture_ids)
 if(length(capture_levels)!=194L) stop("Preflight project_sample_id count mismatch: ",length(capture_levels))
 
+calls_file <- file.path(results_dir,"task004d_scdblfinder_cell_calls.csv.gz")
+sample_file <- file.path(results_dir,"task004d_scdblfinder_by_sample.csv")
+reuse_call_table <- tolower(arg_value("reuse-call-table","false")) %in% c("true","1","yes")
+if(reuse_call_table){
+  if(!file.exists(calls_file)||!file.exists(sample_file))
+    stop("Requested call-table reuse, but the all-cell calls or sample summary file is missing")
+  calls <- fread(calls_file)
+  samples <- fread(sample_file)
+  required_call_cols <- c("cell_id","global_index","dataset","sample_id","patient_id",
+    "tissue","project_sample_id","nCount_RNA","nFeature_RNA","percent.mt",
+    "preliminary_task004_broad","scDblFinder.score","scDblFinder.class","scDblFinder.status")
+  if(length(setdiff(required_call_cols,names(calls))))
+    stop("Saved all-cell call table is missing required fields")
+  if(nrow(calls)!=ncol(obj)) stop("Saved call table cell count does not match the approved input")
+  setorder(calls,global_index)
+  if(!identical(calls$global_index,seq_len(ncol(obj)))||
+     !identical(as.character(calls$cell_id),colnames(obj))||
+     !identical(as.character(calls$dataset),as.character(md$dataset))||
+     !identical(as.character(calls$sample_id),as.character(md$sample_id))||
+     !identical(as.character(calls$project_sample_id),capture_ids))
+    stop("Saved call table identifiers/order do not match the approved input metadata")
+  if(anyNA(calls$scDblFinder.score)||anyNA(calls$scDblFinder.class)||
+     anyNA(calls$scDblFinder.status)||any(calls$scDblFinder.status!="SCORED"))
+    stop("Saved call table contains unscored or incomplete cells")
+  required_sample_cols <- c("project_sample_id","n_cells","expected_dbr","dbr_api_mode","status")
+  if(length(setdiff(required_sample_cols,names(samples)))||
+     anyDuplicated(samples$project_sample_id)||
+     !setequal(samples$project_sample_id,capture_levels)||
+     anyNA(samples$status)||any(samples$status!="SCORED")||
+     anyNA(samples$dbr_api_mode)||any(samples$dbr_api_mode!=dbr_api_mode))
+    stop("Saved sample summary is incomplete or uses a different rate API")
+  observed_sizes <- calls[,.(observed_n=.N),by=project_sample_id]
+  obs_i <- match(samples$project_sample_id,observed_sizes$project_sample_id)
+  if(anyNA(obs_i)||any(samples$n_cells!=observed_sizes$observed_n[obs_i])||
+     any(abs(samples$expected_dbr-pmin(1,0.008*samples$n_cells/1000))>1e-12))
+    stop("Saved sample summary does not agree with all-cell scores or approved rate")
+  old_score_cols <- intersect(c("score_median","score_q25","score_q75",
+    "singlet_nCount_median","doublet_nCount_median","singlet_nFeature_median",
+    "doublet_nFeature_median","review_flag"),names(samples))
+  if(length(old_score_cols)) samples[,(old_score_cols):=NULL]
+  message("Reusing validated all-cell calls for ",nrow(calls)," cells across ",
+          uniqueN(calls$project_sample_id)," captures; no doublet models are rerun")
+} else {
 calls_list <- vector("list",length(capture_levels))
 sample_list <- vector("list",length(capture_levels))
 for(s in seq_along(capture_levels)){
@@ -146,6 +189,7 @@ for(s in seq_along(capture_levels)){
   rm(x,sce,cd,base); gc(verbose=FALSE)
 }
 calls <- rbindlist(calls_list,fill=TRUE); samples <- rbindlist(sample_list,fill=TRUE)
+}
 setorder(calls,global_index)
 if(nrow(calls)!=ncol(obj)||!identical(calls$cell_id,colnames(obj))) stop("Call table mismatch")
 if(anyNA(calls$scDblFinder.score)||anyNA(calls$scDblFinder.class))
@@ -242,7 +286,7 @@ distribution_phase <- function(d,phase){
     by=.(dataset,tissue,project_sample_id,audit_phase,candidate_group)]
 }
 neut_dist <- rbindlist(list(distribution_phase(calls,"before_filter"),
-                            distribution_phase(calls[keep_after_scdblfinder],"after_filter")),
+                            distribution_phase(calls[which(calls$keep_after_scdblfinder)],"after_filter")),
                        use.names=TRUE)
 fwrite(neut_dist,file.path(results_dir,"task004d_neutrophil_retention_distributions.csv"))
 
@@ -276,7 +320,8 @@ obj@misc$task004d_scdblfinder <- list(
   preliminary_neutrophils_before=neut_before,
   preliminary_neutrophils_removed=neut_removed,
   preliminary_neutrophil_retention=neut_ret,
-  scDblFinder_rate_api=dbr_api_mode
+  scDblFinder_rate_api=dbr_api_mode,
+  calls_reused_from_validated_table=reuse_call_table
 )
 ds <- calls[,.(n_cells_before=.N,n_doublet=sum(scDblFinder.class=="doublet",na.rm=TRUE),
   n_singlet=sum(scDblFinder.class=="singlet",na.rm=TRUE),
@@ -320,7 +365,8 @@ val <- data.table(status="VALIDATED",source_qs=source_qs,filtered_qs=out_qs,
   preliminary_neutrophils_removed=neut_removed,
   preliminary_neutrophil_retention=neut_ret,
   scDblFinder_version=as.character(sdf_version),
-  scDblFinder_rate_api=dbr_api_mode,dbr_per1k=0.008)
+  scDblFinder_rate_api=dbr_api_mode,dbr_per1k=0.008,
+  scDblFinder_calls_reused=reuse_call_table)
 fwrite(val,file.path(results_dir,"task004d_scdblfinder_validation.csv"))
 writeLines(c("# Task 004d report - scDblFinder",
   "","## Status","COMPLETED","",

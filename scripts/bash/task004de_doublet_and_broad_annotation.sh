@@ -25,7 +25,8 @@ Rscript scripts/R/task004d_scdblfinder_filter.R \
   --project-root "${ROOT}" \
   --source-qs "${SOURCE}" \
   --out-qs "${SINGLETS}" \
-  --seed 44000
+  --seed 44000 \
+  --reuse-call-table "${TASK004D_REUSE_CALL_TABLE:-FALSE}"
 
 grep -q VALIDATED "${ROOT}/results/task004d_scdblfinder_validation.csv"
 [[ -s "${SINGLETS}" ]]
