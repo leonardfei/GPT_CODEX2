@@ -9,13 +9,14 @@ arg_value <- function(name, default=NULL){
   args[[i+1L]]
 }
 root <- normalizePath(arg_value("project-root","."),mustWork=TRUE)
-source_qs <- arg_value("source-qs",file.path(root,"objects","merge","HCC_TA_8datasets_merged_scdblfinder_filtered_v1.qs"))
-out_qs <- arg_value("out-qs",file.path(root,"objects","merge","HCC_TA_8datasets_merged_scdblfinder_filtered_broad_v1.qs"))
+source_qs <- arg_value("source-qs",file.path(root,"objects","merge","HCC_TA_8datasets_singlets_v1.qs"))
+out_qs <- arg_value("out-qs",file.path(root,"objects","merge","HCC_TA_8datasets_singlets_broad_v1.qs"))
 shared_file <- arg_value("shared-features",file.path(root,"results","task004c_shared_hgnc_features_8of8.txt"))
 results_dir <- arg_value("results-dir",file.path(root,"results"))
 sketch_dir <- arg_value("sketch-dir",file.path(root,"objects","task004e_sketch"))
 fig_dir <- arg_value("figures-dir",file.path(root,"figures","task004e"))
-report_path <- arg_value("report",file.path(root,"reports","task_004e_broad_annotation_report.md"))
+report_path <- arg_value("report",file.path(root,"reports","task_004d_report.md"))
+xue_map_file <- arg_value("xue-map",file.path(root,"config","task004d_xue_author_to_broad.tsv"))
 sketch_n <- as.integer(arg_value("sketch-cells","50000"))
 block_n <- as.integer(arg_value("projection-block","2000"))
 resolution <- as.numeric(arg_value("resolution","0.6"))
@@ -50,49 +51,29 @@ assign("[.task004b_chunked_counts",function(x,i,j,drop=FALSE){
 },envir=.GlobalEnv)
 
 marker_sets <- list(
-  "Tumor/epithelial"=c("EPCAM","KRT8","KRT18","KRT19","KRT7","ALB","APOA1","ASGR1","GPC3","KRT17"),
-  "T/NK"=c("CD3D","CD3E","TRAC","LCK","IL7R","CD8A","NKG7","GNLY","KLRD1","PRF1"),
-  "B"=c("MS4A1","CD79A","CD79B","CD37","CD74","HLA-DRA","CD22","CD83"),
-  "Plasma"=c("MZB1","JCHAIN","SDC1","DERL3","TNFRSF17","IGKC"),
-  "Monocyte/macrophage"=c("LST1","TYROBP","FCER1G","CTSS","LILRB1","C1QA","C1QB","C1QC","CTSD"),
-  "Neutrophil"=c("FCGR3B","CSF3R","CXCR2","FPR1","FCAR","FFAR2","S100A8","S100A9","MCEMP1","NAMPT"),
-  "Dendritic"=c("FCER1A","CD1C","CLEC10A","CLEC9A","XCR1","LILRA4","GZMB","IRF7"),
-  "Fibroblast/mesenchymal"=c("COL1A1","COL1A2","COL3A1","DCN","LUM","COL6A1","COL6A2","FAP","PDGFRA","RGS5","CSPG4"),
-  "Endothelial"=c("PECAM1","VWF","EMCN","KDR","ENG","ESAM","PLVAP","RAMP2","CA4"),
-  "Mast"=c("TPSAB1","TPSB2","KIT","MS4A2","CPA3","HDC"),
-  "Erythroid"=c("HBB","HBA1","HBA2","ALAS2","AHSP","GYPA")
+  "Hepatocyte/Epithelial"=c("ALB","APOA1","APOA2","TTR","ASGR1","KRT8","KRT18","EPCAM","KRT19","KRT7"),
+  "T_cell"=c("CD3D","CD3E","TRAC","CD2","LTB"),
+  "NK_cell"=c("NKG7","GNLY","KLRD1","PRF1","CTSW"),
+  "B_cell"=c("CD79A","CD79B","MS4A1","CD37","CD74","CD22","CD19"),
+  "Plasma_cell"=c("MZB1","JCHAIN","XBP1","DERL3","SDC1","IGKC"),
+  "Monocyte/Macrophage"=c("LST1","TYROBP","FCER1G","CTSS","LILRB1","C1QC","APOC1","SPP1"),
+  "Neutrophil"=c("FCGR3B","CSF3R","CXCR2","FPR1","FCAR","S100A8","S100A9","NAMPT","MCEMP1","ELANE","MPO"),
+  "Dendritic_cell"=c("FCER1A","CD1C","CLEC10A","CLEC9A","XCR1","GZMB","TCF4"),
+  "Mast_cell"=c("TPSAB1","TPSB2","KIT","MS4A2","HDC","CPA3"),
+  "Endothelial"=c("PECAM1","VWF","EMCN","KDR","RAMP2","ENG","ESM1"),
+  "Fibroblast/Mesenchymal"=c("COL1A1","COL1A2","COL3A1","DCN","LUM","COL6A1","COL6A2","PDGFRA","FAP","THY1")
 )
+neutrophil_core <- c("FCGR3B","CSF3R","FPR1","FCAR","ELANE","MPO")
 
+if(!file.exists(xue_map_file)) stop("Xue author crosswalk missing: ",xue_map_file)
+xue_map <- fread(xue_map_file)
+if(!all(c("source_author_annotation","broad_celltype_v2")%in%colnames(xue_map)))
+  stop("Invalid Xue author crosswalk")
+xue_lookup <- setNames(xue_map$broad_celltype_v2,xue_map$source_author_annotation)
 map_author_broad <- function(x){
-  x <- as.character(x); y <- tolower(x); out <- rep(NA_character_,length(y))
-  put <- function(pattern,label){
-    z <- is.na(out)&!is.na(y)&grepl(pattern,y,perl=TRUE)
-    out[z] <<- label
-  }
-  # Exact Xue et al. source-prefix anchors first.
-  put("^neu_","Neutrophil")
-  put("^mph_|^mo_|^mono-like_","Monocyte/macrophage")
-  put("^dc_|^monodc$","Dendritic")
-  put("^ec_","Endothelial")
-  put("^fb_|^mu_","Fibroblast/mesenchymal")
-  put("^b_03_mzb1$","Plasma")
-  put("^b_","B")
-  put("^cd4t_|^cd8t_|^nk_|^gdt_","T/NK")
-  put("^mast$","Mast")
-  put("^tumor$","Tumor/epithelial")
-  # Generic fallbacks for future/alternate author labels.
-  put("neut|fcgr3b|cxcr2","Neutrophil")
-  put("mast|tpsab|tpsb","Mast")
-  put("plasma|plasmablast|jchain|mzb1","Plasma")
-  put("dend|cdc|pdc|clec9a|fcer1a","Dendritic")
-  put("macro|monocyte|tam|kupffer|c1qa|spp1.*mac","Monocyte/macrophage")
-  put("endothel|vascular|sinusoid|plvap","Endothelial")
-  put("fibro|caf|stellate|mesench|pericy|rgs5|col1a1","Fibroblast/mesenchymal")
-  put("b cell|b-cell|naive b|memory b|ms4a1|cd79a","B")
-  put("cd4|cd8|treg|trm|tex|tem|t cell|t-cell|nkt|natural killer","T/NK")
-  put("eryth|rbc|red blood|hba1|hbb","Erythroid")
-  put("tumou?r|malignant|cancer|hepatocyte|epithelial|cholangi|hcc","Tumor/epithelial")
-  out
+  y <- unname(xue_lookup[as.character(x)])
+  y[is.na(y)] <- "Uncertain/Mixed"
+  y
 }
 
 stratified_sample <- function(indices,strata,target,seed){
