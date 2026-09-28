@@ -76,21 +76,11 @@ map_author_broad <- function(x){
   y
 }
 
-stratified_sample <- function(indices,strata,target,seed){
-  if(length(indices)<=target) return(indices)
-  set.seed(seed); st <- as.character(strata); u <- unique(st)
-  per <- max(1L,ceiling(target/length(u)))
-  take <- unlist(lapply(u,function(g){
-    z <- indices[st==g]
-    if(length(z)<=per) z else sample(z,per)
-  }),use.names=FALSE)
-  take <- unique(take)
-  if(length(take)>target) take <- sample(take,target)
-  if(length(take)<target){
-    rem <- setdiff(indices,take)
-    take <- c(take,sample(rem,min(target-length(take),length(rem))))
-  }
-  sort(take)
+available_memory_bytes <- function(){
+  if(!file.exists("/proc/meminfo")) return(NA_real_)
+  line <- grep("^MemAvailable:",readLines("/proc/meminfo"),value=TRUE)
+  if(!length(line)) return(NA_real_)
+  as.numeric(sub("^MemAvailable:\\s*([0-9]+)\\s+kB.*$","\\1",line[[1]]))*1024
 }
 
 cluster_marker_annotation <- function(sketch,markers_de,author_broad=NULL){
@@ -237,13 +227,21 @@ cluster_rows <- list(); count_rows <- list(); de_rows <- list(); sketch_flags <-
 
 run_dataset <- function(dataset_name,is_reference=FALSE,reference_matrix=NULL,reference_labels=NULL){
   idx <- which(as.character(md$dataset)==dataset_name)
-  strata <- as.character(md$project_sample_id[idx])
   author_all <- if("source_author_annotation"%in%colnames(md)) map_author_broad(md$source_author_annotation[idx]) else rep(NA_character_,length(idx))
-  if(is_reference&&any(!is.na(author_all))) strata <- paste(strata,ifelse(is.na(author_all),"unmapped",author_all),sep="||")
-  use_sketch <- length(idx)>250000L
-  sk_idx <- if(use_sketch) {
-    stratified_sample(idx,strata,min(sketch_n,length(idx)),seed+match(dataset_name,datasets))
-  } else idx
+  # Conservatively estimate five dense scaled/HVG-sized working copies plus
+  # sparse count/normalization/graph overhead. Full-cell analysis is the
+  # default; only datasets >250k can trigger the approved sketch contingency.
+  available_bytes <- available_memory_bytes()
+  estimate_bytes <- length(idx)*min(3000L,length(shared_genes))*8*5 + length(idx)*16384
+  use_sketch <- length(idx)>250000L &&
+    (!is.finite(available_bytes) || estimate_bytes>0.75*available_bytes)
+  if(use_sketch) stop("Full-cell graph estimate exceeds the 75% MemAvailable budget for ",
+    dataset_name," (estimated ",round(estimate_bytes/1024^3,1)," GiB; available ",
+    ifelse(is.finite(available_bytes),round(available_bytes/1024^3,1),"unknown"),
+    " GiB). Stop before analysis rather than use an unapproved non-leverage sketch.")
+  sk_idx <- idx
+  message(sprintf("%s: full-cell analysis (%d cells; estimated working set %.1f GiB; MemAvailable %.1f GiB)",
+    dataset_name,length(idx),estimate_bytes/1024^3,available_bytes/1024^3))
   x <- counts_layer[shared_genes,sk_idx,drop=FALSE]
   sk <- CreateSeuratObject(counts=x,assay="RNA",project=dataset_name,meta.data=md[sk_idx,,drop=FALSE])
   sk <- NormalizeData(sk,normalization.method="LogNormalize",scale.factor=10000,verbose=FALSE)
@@ -361,7 +359,10 @@ run_dataset <- function(dataset_name,is_reference=FALSE,reference_matrix=NULL,re
   ct[,used_sketch:=use_sketch]
   cluster_rows[[dataset_name]] <<- ct
   sketch_flags[[dataset_name]] <<- data.table(dataset=dataset_name,n_cells=length(idx),
-                                              n_analysis_cells=ncol(sk),used_sketch=use_sketch)
+    n_analysis_cells=ncol(sk),used_sketch=use_sketch,
+    estimated_full_working_set_gib=estimate_bytes/1024^3,
+    mem_available_before_gib=available_bytes/1024^3,
+    sampling_method="none_full_cell")
   map_final <- setNames(ct$final_label,ct$cluster)
   map_conf <- setNames(ct$final_confidence,ct$cluster)
   map_basis <- setNames(ct$final_basis,ct$cluster)
