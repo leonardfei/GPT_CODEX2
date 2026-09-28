@@ -73,7 +73,8 @@ if(!"project_sample_id"%in%colnames(md)){
   if(!all(c("dataset","sample_id")%in%colnames(md))) stop("Missing sample identifiers")
   md$project_sample_id <- paste(md$dataset,md$sample_id,sep="::")
 }
-req <- c("dataset","sample_id","patient_id","tissue","project_sample_id")
+req <- c("dataset","sample_id","patient_id","project_patient_id","tissue",
+         "project_sample_id","percent.mt","project_broad_celltype")
 if(length(setdiff(req,colnames(md)))) stop("Missing required metadata")
 capture_ids <- as.character(md$project_sample_id)
 capture_levels <- unique(capture_ids)
@@ -92,6 +93,11 @@ for(s in seq_along(capture_levels)){
     project_sample_id=cap,
     nCount_RNA=as.numeric(md[[count_col]][idx]),
     nFeature_RNA=as.numeric(md[[feature_col]][idx]))
+  base[,project_patient_id:=as.character(md$project_patient_id[idx])]
+  base[,percent.mt:=as.numeric(md$percent.mt[idx])]
+  base[,preliminary_task004_broad:=as.character(md$project_broad_celltype[idx])]
+  if("source_author_annotation"%in%colnames(md))
+    base[,source_author_annotation:=as.character(md$source_author_annotation[idx])]
   x <- counts_layer[,idx,drop=FALSE]
   if(!inherits(x,"dgCMatrix")) x <- as(x,"dgCMatrix")
   if(any(Matrix::colSums(x)<=0)) stop("Zero-count cell in ",cap)
@@ -124,10 +130,14 @@ for(s in seq_along(capture_levels)){
 calls <- rbindlist(calls_list,fill=TRUE); samples <- rbindlist(sample_list,fill=TRUE)
 setorder(calls,global_index)
 if(nrow(calls)!=ncol(obj)||!identical(calls$cell_id,colnames(obj))) stop("Call table mismatch")
+if(anyNA(calls$scDblFinder.score)||anyNA(calls$scDblFinder.class))
+  stop("At least one original cell lacks a scDblFinder score or class")
+prelim <- as.character(md$project_broad_celltype)
+calls[,candidate_neutrophil:=tolower(trimws(preliminary_task004_broad))=="neutrophil"]
 calls[,keep_after_scdblfinder:=scDblFinder.class!="doublet"|is.na(scDblFinder.class)]
 keep <- calls$keep_after_scdblfinder
-prelim <- if("project_broad_celltype"%in%colnames(md)) as.character(md$project_broad_celltype) else rep(NA_character_,nrow(md))
-calls[,preliminary_task004_broad:=prelim]
+calls[,removal_reason:=fifelse(scDblFinder.class=="doublet","scDblFinder_doublet",
+                               fifelse(keep_after_scdblfinder,"retained_singlet","other_removed"))]
 broad_audit <- calls[,.(n_cells=.N,n_doublet=sum(scDblFinder.class=="doublet",na.rm=TRUE),
   doublet_fraction=mean(scDblFinder.class=="doublet",na.rm=TRUE)),
   by=.(dataset,tissue,preliminary_task004_broad)]
@@ -148,10 +158,75 @@ samples[,review_flag:=fifelse(doublet_fraction>0.30,"REVIEW_HIGH_GT30PCT",
                       fifelse(doublet_fraction<0.001 & n_cells>=1000,"REVIEW_LOW_LT0.1PCT","none"))]
 fwrite(samples,file.path(results_dir,"task004d_scdblfinder_by_sample.csv"))
 
+summarize_call_class <- function(d,group_cols,level_name){
+  z <- d[,.(n_cells=.N,
+    score_q25=quantile(scDblFinder.score,0.25,names=FALSE),
+    score_median=median(scDblFinder.score),
+    score_q75=quantile(scDblFinder.score,0.75,names=FALSE),
+    nCount_q25=quantile(nCount_RNA,0.25,names=FALSE),
+    nCount_median=median(nCount_RNA),
+    nCount_q75=quantile(nCount_RNA,0.75,names=FALSE),
+    nFeature_q25=quantile(nFeature_RNA,0.25,names=FALSE),
+    nFeature_median=median(nFeature_RNA),
+    nFeature_q75=quantile(nFeature_RNA,0.75,names=FALSE),
+    percent_mt_q25=quantile(percent.mt,0.25,names=FALSE),
+    percent_mt_median=median(percent.mt),
+    percent_mt_q75=quantile(percent.mt,0.75,names=FALSE)),
+    by=c(group_cols,"scDblFinder.class")]
+  z[,analysis_level:=level_name]
+  z
+}
+call_qc <- rbindlist(list(
+  summarize_call_class(calls,character(),"overall"),
+  summarize_call_class(calls,"dataset","dataset"),
+  summarize_call_class(calls,c("dataset","tissue"),"dataset_tissue"),
+  summarize_call_class(calls,"project_sample_id","sample")
+),fill=TRUE)
+fwrite(call_qc,file.path(results_dir,"task004d_scdblfinder_cell_qc_distributions.csv"))
+overall <- calls[,.(n_cells_before=.N,
+  n_singlet=sum(scDblFinder.class=="singlet"),
+  n_doublet=sum(scDblFinder.class=="doublet"),
+  doublet_fraction=mean(scDblFinder.class=="doublet"),
+  score_q25=quantile(scDblFinder.score,0.25,names=FALSE),
+  score_median=median(scDblFinder.score),
+  score_q75=quantile(scDblFinder.score,0.75,names=FALSE))]
+fwrite(overall,file.path(results_dir,"task004d_scdblfinder_overall.csv"))
+
 n_before <- length(keep); n_after <- sum(keep); n_removed <- n_before-n_after
 neut_before <- sum(tolower(prelim)=="neutrophil",na.rm=TRUE)
 neut_removed <- sum(tolower(prelim)=="neutrophil"&!keep,na.rm=TRUE)
 neut_ret <- if(neut_before) (neut_before-neut_removed)/neut_before else NA_real_
+
+neut_audit <- calls[,.(n_cells_before=.N,
+  n_candidate_neutrophils_before=sum(candidate_neutrophil),
+  n_candidate_neutrophils_after=sum(candidate_neutrophil&keep_after_scdblfinder),
+  n_candidate_neutrophils_removed=sum(candidate_neutrophil&!keep_after_scdblfinder),
+  candidate_neutrophil_retention_fraction=ifelse(sum(candidate_neutrophil)>0,
+    sum(candidate_neutrophil&keep_after_scdblfinder)/sum(candidate_neutrophil),NA_real_),
+  n_candidate_neutrophils_removed_doublet=sum(candidate_neutrophil&scDblFinder.class=="doublet"),
+  n_other_cells_before=sum(!candidate_neutrophil),
+  n_other_cells_after=sum(!candidate_neutrophil&keep_after_scdblfinder),
+  n_other_cells_removed=sum(!candidate_neutrophil&!keep_after_scdblfinder),
+  n_removed_doublet=sum(scDblFinder.class=="doublet"),
+  n_unscored=sum(is.na(scDblFinder.class))),by=.(dataset,tissue,project_sample_id)]
+fwrite(neut_audit,file.path(results_dir,"task004d_neutrophil_doublet_retention.csv"))
+
+distribution_phase <- function(d,phase){
+  z <- copy(d); z[,audit_phase:=phase]
+  z[,candidate_group:=fifelse(candidate_neutrophil,"candidate_neutrophil","other_cells")]
+  z[,.(n_cells=.N,
+    nCount_q25=quantile(nCount_RNA,0.25,names=FALSE),nCount_median=median(nCount_RNA),
+    nCount_q75=quantile(nCount_RNA,0.75,names=FALSE),
+    nFeature_q25=quantile(nFeature_RNA,0.25,names=FALSE),nFeature_median=median(nFeature_RNA),
+    nFeature_q75=quantile(nFeature_RNA,0.75,names=FALSE),
+    percent_mt_q25=quantile(percent.mt,0.25,names=FALSE),percent_mt_median=median(percent.mt),
+    percent_mt_q75=quantile(percent.mt,0.75,names=FALSE)),
+    by=.(dataset,tissue,project_sample_id,audit_phase,candidate_group)]
+}
+neut_dist <- rbindlist(list(distribution_phase(calls,"before_filter"),
+                            distribution_phase(calls[keep_after_scdblfinder],"after_filter")),
+                       use.names=TRUE)
+fwrite(neut_dist,file.path(results_dir,"task004d_neutrophil_retention_distributions.csv"))
 
 new_chunks <- vector("list",length(counts_layer$chunks)); new_cells <- character()
 for(k in seq_along(counts_layer$chunks)){
@@ -198,15 +273,6 @@ tissue_ds <- calls[,.(n_cells_before=.N,
   doublet_fraction=mean(scDblFinder.class=="doublet",na.rm=TRUE)),
   by=.(dataset,tissue)]
 fwrite(tissue_ds,file.path(results_dir,"task004d_scdblfinder_by_dataset_tissue.csv"))
-
-neut_audit <- calls[tolower(preliminary_task004_broad)=="neutrophil", .(
-  n_neutrophil_before=.N,
-  n_neutrophil_doublet=sum(scDblFinder.class=="doublet",na.rm=TRUE),
-  n_neutrophil_retained=sum(keep_after_scdblfinder),
-  neutrophil_doublet_fraction=mean(scDblFinder.class=="doublet",na.rm=TRUE),
-  neutrophil_retention_fraction=mean(keep_after_scdblfinder)
-),by=.(dataset,tissue,project_sample_id)]
-fwrite(neut_audit,file.path(results_dir,"task004d_neutrophil_doublet_retention.csv"))
 
 pdf(file.path(root,"figures","task004d_scdblfinder_qc.pdf"),width=12,height=8)
 print(ggplot(samples,aes(x=reorder(project_sample_id,doublet_fraction),y=doublet_fraction,fill=dataset))+
