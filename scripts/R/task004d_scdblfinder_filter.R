@@ -11,11 +11,10 @@ arg_value <- function(name, default=NULL) {
 }
 root <- normalizePath(arg_value("project-root","."), mustWork=TRUE)
 source_qs <- arg_value("source-qs",file.path(root,"objects","merge","HCC_TA_8datasets_merged_review_v1.qs"))
-out_qs <- arg_value("out-qs",file.path(root,"objects","merge","HCC_TA_8datasets_merged_scdblfinder_filtered_v1.qs"))
+out_qs <- arg_value("out-qs",file.path(root,"objects","merge","HCC_TA_8datasets_singlets_v1.qs"))
 results_dir <- arg_value("results-dir",file.path(root,"results"))
 report_path <- arg_value("report",file.path(root,"reports","task_004d_scdblfinder_report.md"))
-min_cells <- as.integer(arg_value("min-cells","100"))
-seed_base <- as.integer(arg_value("seed","40400"))
+seed_base <- as.integer(arg_value("seed","44000"))
 dir.create(dirname(out_qs),recursive=TRUE,showWarnings=FALSE)
 dir.create(results_dir,recursive=TRUE,showWarnings=FALSE)
 dir.create(dirname(report_path),recursive=TRUE,showWarnings=FALSE)
