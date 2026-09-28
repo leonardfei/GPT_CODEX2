@@ -63,9 +63,9 @@ broad_lines <- paste(
   collapse="\n"
 )
 sketch_lines <- paste(
-  sprintf("- %s: %s cells used for clustering of %s retained cells; sketch=%s.",
+  sprintf("- %s: %s cells used for clustering of %s retained cells; sketch=%s; method=%s.",
           sketch$dataset,fmt(sketch$n_analysis_cells),fmt(sketch$n_cells),
-          ifelse(sketch$used_sketch,"YES","NO")),
+          ifelse(sketch$used_sketch,"YES","NO"),sketch$sampling_method),
   collapse="\n"
 )
 
@@ -120,7 +120,7 @@ lines <- c(
   "## Broad annotation v2",
   "- Annotation was performed within each dataset without cross-dataset batch integration.",
   "- Feature universe started from the Task004c 8/8 shared HGNC set; mitochondrial and ribosomal HVGs were excluded from PCA features.",
-  "- LogNormalize (scale factor 10,000), ~3,000 HVGs, ScaleData, 30-PC PCA, neighbors and clustering at resolutions 0.4 and 0.8 were used; resolution 0.8 is the working partition.",
+  "- LogNormalize (scale factor 10,000), ~3,000 HVGs, ScaleData, 30-PC PCA, neighbors and clustering at resolutions 0.4 and 0.8 were used; resolution 0.8 is the working partition. After a documented full-cell OOM in nature_xue, Seurat leverage-score sketching (up to 50,000 cells) was used for that dataset; the same method is available to any >250,000-cell dataset exceeding the conservative memory guard. Sketch cluster labels were projected to all cells by block-wise PCA-centroid distance.",
   "- Cluster markers and canonical lineage programs were combined with Xue author-label pseudobulk reference transfer.",
   "- Neutrophil calls required coherent granulocyte evidence including at least one core marker; S100A8/S100A9 alone were insufficient.",
   "- No malignant-cell call and no cross-dataset integration were performed.",

@@ -228,27 +228,47 @@ cluster_rows <- list(); count_rows <- list(); de_rows <- list(); sketch_flags <-
 run_dataset <- function(dataset_name,is_reference=FALSE,reference_matrix=NULL,reference_labels=NULL){
   idx <- which(as.character(md$dataset)==dataset_name)
   author_all <- if("source_author_annotation"%in%colnames(md)) map_author_broad(md$source_author_annotation[idx]) else rep(NA_character_,length(idx))
-  # Conservatively estimate five dense scaled/HVG-sized working copies plus
-  # sparse count/normalization/graph overhead. Full-cell analysis is the
-  # default; only datasets >250k can trigger the approved sketch contingency.
+  # The first nature_xue full-cell attempt exceeded 135 GB RSS before the
+  # server OOM-killed it. Treat that observed failure as direct evidence that
+  # its full-cell graph/marker workflow is infeasible at the available RAM.
   available_bytes <- available_memory_bytes()
-  estimate_bytes <- length(idx)*min(3000L,length(shared_genes))*8*5 + length(idx)*16384
+  estimate_bytes <- length(idx)*min(3000L,length(shared_genes))*8*10 + length(idx)*32768
   use_sketch <- length(idx)>250000L &&
-    (!is.finite(available_bytes) || estimate_bytes>0.75*available_bytes)
-  if(use_sketch) stop("Full-cell graph estimate exceeds the 75% MemAvailable budget for ",
-    dataset_name," (estimated ",round(estimate_bytes/1024^3,1)," GiB; available ",
-    ifelse(is.finite(available_bytes),round(available_bytes/1024^3,1),"unknown"),
-    " GiB). Stop before analysis rather than use an unapproved non-leverage sketch.")
-  sk_idx <- idx
-  message(sprintf("%s: full-cell analysis (%d cells; estimated working set %.1f GiB; MemAvailable %.1f GiB)",
-    dataset_name,length(idx),estimate_bytes/1024^3,available_bytes/1024^3))
-  x <- counts_layer[shared_genes,sk_idx,drop=FALSE]
-  sk <- CreateSeuratObject(counts=x,assay="RNA",project=dataset_name,meta.data=md[sk_idx,,drop=FALSE])
+    (dataset_name=="nature_xue" || !is.finite(available_bytes) ||
+       estimate_bytes>0.75*available_bytes)
+  message(sprintf("%s: %s analysis (%d cells; conservative full working-set estimate %.1f GiB; MemAvailable %.1f GiB)",
+    dataset_name,ifelse(use_sketch,"leverage-score sketch","full-cell"),
+    length(idx),estimate_bytes/1024^3,available_bytes/1024^3))
+  x <- counts_layer[shared_genes,idx,drop=FALSE]
+  sk <- CreateSeuratObject(counts=x,assay="RNA",project=dataset_name,meta.data=md[idx,,drop=FALSE])
   sk <- NormalizeData(sk,normalization.method="LogNormalize",scale.factor=10000,verbose=FALSE)
   sk <- FindVariableFeatures(sk,selection.method="vst",nfeatures=min(3000,nrow(sk)),verbose=FALSE)
   hvg <- VariableFeatures(sk)
   hvg <- hvg[!grepl("^MT-|^RPL|^RPS",hvg,ignore.case=TRUE)]
   if(length(hvg)<1000) stop("Too few non-mito/ribosomal HVGs for ",dataset_name)
+  if(use_sketch){
+    sk <- Seurat::SketchData(
+      object=sk,assay="RNA",ncells=min(sketch_n,ncol(sk)),
+      sketched.assay="task004d_sketch",method="LeverageScore",
+      var.name="task004d_leverage_score",over.write=TRUE,
+      seed=seed,verbose=TRUE,features=hvg
+    )
+    sketch_cells <- SeuratObject::Cells(sk[["task004d_sketch"]])
+    if(length(sketch_cells)!=min(sketch_n,length(idx)))
+      stop("Seurat leverage-score sketch returned an unexpected cell count for ",dataset_name)
+    sketch_global_idx <- match(sketch_cells,colnames(obj))
+    if(anyNA(sketch_global_idx)||anyDuplicated(sketch_global_idx))
+      stop("Leverage-score sketch cell IDs did not map uniquely to the source object for ",dataset_name)
+    rm(sk,x); gc(verbose=FALSE)
+    x_sketch <- counts_layer[shared_genes,sketch_global_idx,drop=FALSE]
+    sk <- CreateSeuratObject(counts=x_sketch,assay="RNA",project=dataset_name,
+                             meta.data=md[sketch_global_idx,,drop=FALSE])
+    rm(x_sketch); gc(verbose=FALSE)
+    sk <- NormalizeData(sk,normalization.method="LogNormalize",scale.factor=10000,verbose=FALSE)
+    VariableFeatures(sk) <- hvg
+  } else {
+    VariableFeatures(sk) <- hvg
+  }
   sk <- ScaleData(sk,features=hvg,verbose=FALSE)
   npcs <- min(30,length(hvg)-1L)
   sk <- RunPCA(sk,features=hvg,npcs=npcs,verbose=FALSE)
@@ -362,7 +382,7 @@ run_dataset <- function(dataset_name,is_reference=FALSE,reference_matrix=NULL,re
     n_analysis_cells=ncol(sk),used_sketch=use_sketch,
     estimated_full_working_set_gib=estimate_bytes/1024^3,
     mem_available_before_gib=available_bytes/1024^3,
-    sampling_method="none_full_cell")
+    sampling_method=if(use_sketch) "Seurat::SketchData method=LeverageScore" else "none_full_cell")
   map_final <- setNames(ct$final_label,ct$cluster)
   map_conf <- setNames(ct$final_confidence,ct$cluster)
   map_basis <- setNames(ct$final_basis,ct$cluster)
@@ -481,11 +501,14 @@ obj@misc$task004d_broad_annotation <- list(
   annotation_resolution=0.8,
   reference_dataset="nature_xue",
   reference_source="source_author_annotation",
+  sketch_method="Seurat::SketchData method=LeverageScore; up to 50,000 cells for nature_xue after observed full-cell OOM, or when another >250,000-cell dataset's conservative estimate exceeds 75% of available memory",
+  projection_method="PCA-centroid nearest-cluster projection in blocks for all cells when sketching is used",
   method=paste(
     "within-dataset LogNormalize/HVG/PCA/clustering;",
     "cluster markers + canonical lineage programs;",
     "Xue author-label pseudobulk SingleR reference;",
-    "50k sketch only when dataset >250k cells, with PCA-centroid projection"
+    "Seurat leverage-score sketch up to 50k cells for nature_xue after observed full-cell OOM, or when another >250k-cell dataset's conservative estimate exceeds 75% of available memory;",
+    "PCA-centroid projection to all cells in blocks"
   ),
   seed=seed
 )
