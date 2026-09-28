@@ -236,71 +236,138 @@ run_dataset <- function(dataset_name,is_reference=FALSE,reference_matrix=NULL,re
   if(nrow(de)){de$dataset <- dataset_name; de_rows[[dataset_name]] <<- as.data.table(de)}
   else de <- data.frame(gene=character(),cluster=character())
 
-  author_sk <- if(is_reference&&"source_author_annotation"%in%colnames(sk[[]])) map_author_broad(sk$source_author_annotation) else NULL
+  author_sk <- if(is_reference&&"source_author_annotation"%in%colnames(sk[[]])) {
+    map_author_broad(sk$source_author_annotation)
+  } else NULL
   ct <- cluster_marker_annotation(sk,de,author_sk)
+  ct[,marker_strong:=marker_hits>=2&marker_margin>=0.15]
+  ct[marker_label=="Neutrophil",
+     marker_strong:=marker_strong&neutrophil_core_hits>=1]
+  ct[,c("broad_reference_label","broad_reference_score","final_label",
+        "final_confidence","final_basis") :=
+       list(NA_character_,NA_real_,"Uncertain/Mixed","uncertain","conflict_or_insufficient")]
 
   if(is_reference){
-    ct[,c("singler_label","singler_pruned","singler_delta"):=list(NA_character_,NA_character_,NA_real_)]
-    ct[,final_label:=fifelse(!is.na(anchor_label)&anchor_purity>=0.65,anchor_label,
-                      fifelse(marker_hits>=2&marker_margin>=0.15,marker_label,"Other/uncertain"))]
-    ct[,final_confidence:=fifelse(!is.na(anchor_label)&anchor_purity>=0.80,"high_author_anchor",
-                           fifelse(!is.na(anchor_label)&anchor_purity>=0.65,"medium_author_anchor",
-                           fifelse(marker_hits>=3&marker_margin>=0.40,"high_marker",
-                           fifelse(marker_hits>=2&marker_margin>=0.15,"medium_marker","low_uncertain"))))]
+    for(r in seq_len(nrow(ct))){
+      anchor_ok <- !is.na(ct$anchor_label[r]) && ct$anchor_purity[r]>=0.70 &&
+                   ct$anchor_label[r]==ct$marker_label[r] && ct$marker_hits[r]>=1
+      if(ct$marker_label[r]=="Neutrophil")
+        anchor_ok <- anchor_ok && ct$neutrophil_core_hits[r]>=1
+      ct$broad_reference_label[r] <- ct$anchor_label[r]
+      ct$broad_reference_score[r] <- ct$anchor_purity[r]
+      if(anchor_ok){
+        ct$final_label[r] <- ct$anchor_label[r]
+        ct$final_confidence[r] <- ifelse(ct$anchor_purity[r]>=0.85 &&
+                                        ct$marker_strong[r],"high","medium")
+        ct$final_basis[r] <- "xue_author_consensus_plus_markers"
+      } else if(ct$marker_strong[r] &&
+                (is.na(ct$anchor_label[r]) || ct$anchor_purity[r]<0.70)){
+        ct$final_label[r] <- ct$marker_label[r]
+        ct$final_confidence[r] <- ifelse(ct$marker_hits[r]>=3 &&
+                                        ct$marker_margin[r]>=0.40,"high","medium")
+        ct$final_basis[r] <- "canonical_cluster_markers"
+      }
+    }
+    ct[,c("singler_label","singler_pruned","singler_delta") :=
+       list(NA_character_,NA_character_,NA_real_)]
   } else {
     cl <- as.character(Idents(sk)); norm <- LayerData(sk[["RNA"]],layer="data")
     cls <- sort(unique(cl))
     test_avg <- sapply(cls,function(k) Matrix::rowMeans(norm[,cl==k,drop=FALSE]))
-    if(is.null(dim(test_avg))) test_avg <- matrix(test_avg,ncol=1,dimnames=list(rownames(norm),cls))
+    if(is.null(dim(test_avg)))
+      test_avg <- matrix(test_avg,ncol=1,dimnames=list(rownames(norm),cls))
     common <- intersect(rownames(test_avg),rownames(reference_matrix))
-    pred <- SingleR(test=test_avg[common,,drop=FALSE],ref=reference_matrix[common,,drop=FALSE],
+    pred <- SingleR(test=test_avg[common,,drop=FALSE],
+                    ref=reference_matrix[common,,drop=FALSE],
                     labels=reference_labels,prune=TRUE)
     pd <- data.table(cluster=rownames(pred),singler_label=as.character(pred$labels),
                      singler_pruned=as.character(pred$pruned.labels),
                      singler_delta=as.numeric(pred$delta.next))
     ct <- merge(ct,pd,by="cluster",all.x=TRUE)
-    ct[,ref_use:=fifelse(!is.na(singler_pruned)&nzchar(singler_pruned),singler_pruned,singler_label)]
-    ct[,agree:=!is.na(ref_use)&ref_use==marker_label]
-    ct[,final_label:=fifelse(agree,marker_label,
-                      fifelse((is.na(ref_use)|!nzchar(ref_use))&marker_hits>=2&marker_margin>=0.15,marker_label,
-                      fifelse(marker_hits<2|marker_margin<0.15,ref_use,
-                      fifelse(marker_hits>=3&marker_margin>=0.60,marker_label,"Other/uncertain"))))]
-    ct[is.na(final_label)|!nzchar(final_label),final_label:="Other/uncertain"]
-    ct[,final_confidence:=fifelse(agree&marker_hits>=2,"high_reference_marker_agreement",
-                           fifelse(final_label=="Other/uncertain","low_conflict",
-                           fifelse(final_label==marker_label,"medium_marker","medium_reference")))]
-    ct[,c("ref_use","agree"):=NULL]
+    for(r in seq_len(nrow(ct))){
+      ref_use <- if(!is.na(ct$singler_pruned[r])&&nzchar(ct$singler_pruned[r]))
+        ct$singler_pruned[r] else ct$singler_label[r]
+      ct$broad_reference_label[r] <- ref_use
+      ct$broad_reference_score[r] <- ct$singler_delta[r]
+      ref_agree <- !is.na(ref_use)&&nzchar(ref_use)&&ref_use==ct$marker_label[r]
+      marker_ok <- isTRUE(ct$marker_strong[r])
+      compatible_ref <- ref_agree && ct$marker_hits[r]>=1 && ct$marker_margin[r]>=0.05
+      if(ct$marker_label[r]=="Neutrophil")
+        compatible_ref <- compatible_ref && ct$neutrophil_core_hits[r]>=1
+      if(marker_ok && (is.na(ref_use)||!nzchar(ref_use)||ref_agree)){
+        ct$final_label[r] <- ct$marker_label[r]
+        ct$final_confidence[r] <- ifelse(ref_agree,"high","medium")
+        ct$final_basis[r] <- ifelse(ref_agree,
+                                   "xue_reference_plus_canonical_markers",
+                                   "canonical_cluster_markers")
+      } else if(compatible_ref){
+        ct$final_label[r] <- ref_use
+        ct$final_confidence[r] <- "medium"
+        ct$final_basis[r] <- "xue_reference_compatible_markers"
+      }
+    }
   }
 
-  ct[,dataset:=dataset_name]; cluster_rows[[dataset_name]] <<- ct
+  ct[,dataset:=dataset_name]
+  ct[,used_sketch:=use_sketch]
+  cluster_rows[[dataset_name]] <<- ct
+  sketch_flags[[dataset_name]] <<- data.table(dataset=dataset_name,n_cells=length(idx),
+                                              n_analysis_cells=ncol(sk),used_sketch=use_sketch)
   map_final <- setNames(ct$final_label,ct$cluster)
+  map_conf <- setNames(ct$final_confidence,ct$cluster)
+  map_basis <- setNames(ct$final_basis,ct$cluster)
+  map_ref <- setNames(ct$broad_reference_label,ct$cluster)
+  map_ref_score <- setNames(ct$broad_reference_score,ct$cluster)
   sk$broad_celltype_cluster <- map_final[as.character(Idents(sk))]
-  saveRDS(sk,file.path(sketch_dir,paste0(dataset_name,"_broad_sketch.rds")),compress=FALSE)
+  saveRDS(sk,file.path(sketch_dir,paste0(dataset_name,"_broad_reference.rds")),compress=FALSE)
 
   if(is_reference){
-    norm <- LayerData(sk[["RNA"]],layer="data"); broad <- as.character(sk$broad_celltype_cluster)
-    valid <- broad!="Other/uncertain"&!is.na(broad)
+    norm <- LayerData(sk[["RNA"]],layer="data")
+    broad <- as.character(sk$broad_celltype_cluster)
+    valid <- broad!="Uncertain/Mixed"&!is.na(broad)
     grp <- paste(as.character(sk$project_sample_id),broad,sep="||")
     groups <- unique(grp[valid])
     ref <- sapply(groups,function(g) Matrix::rowMeans(norm[,valid&grp==g,drop=FALSE]))
     if(is.null(dim(ref))) ref <- matrix(ref,ncol=1,dimnames=list(rownames(norm),groups))
-    reference_matrix <- ref; reference_labels <- sub("^.*\\|\\|","",groups)
+    reference_matrix <- ref
+    reference_labels <- sub("^.*\\|\\|","",groups)
   }
 
-  proj <- project_to_clusters(counts_layer,idx,shared_genes,sk,hvg,ct,block_n)
-  if(is_reference&&any(!is.na(author_all))){
-    z <- !is.na(author_all); proj$projected_label[z] <- author_all[z]
-    proj$cluster_confidence[z] <- "author_anchor_cell"
+  if(use_sketch){
+    proj <- project_to_clusters(counts_layer,idx,shared_genes,sk,hvg,ct,block_n)
+  } else {
+    cc <- as.character(Idents(sk))
+    proj <- data.table(global_index=idx,reference_cluster=cc,
+                       projected_label=map_final[cc],
+                       cluster_confidence=map_conf[cc],
+                       annotation_basis=map_basis[cc],
+                       reference_label=map_ref[cc],
+                       reference_score=as.numeric(map_ref_score[cc]),
+                       projection_margin=1)
   }
-  new_label[idx] <<- proj$projected_label; new_conf[idx] <<- proj$cluster_confidence
-  new_cluster[idx] <<- proj$reference_cluster; proj_margin[idx] <<- proj$projection_margin
-  count_rows[[dataset_name]] <<- data.table(dataset=dataset_name,broad_celltype=proj$projected_label)[,
-    .(n_cells=.N),by=.(dataset,broad_celltype)]
 
-  pdf(file.path(fig_dir,paste0(dataset_name,"_sketch_umap.pdf")),width=9,height=7)
+  new_label[idx] <<- proj$projected_label
+  new_conf[idx] <<- proj$cluster_confidence
+  new_basis[idx] <<- proj$annotation_basis
+  new_ref_label[idx] <<- proj$reference_label
+  new_ref_score[idx] <<- proj$reference_score
+  new_cluster[idx] <<- proj$reference_cluster
+  proj_margin[idx] <<- proj$projection_margin
+  count_rows[[dataset_name]] <<- data.table(
+    dataset=dataset_name,tissue=as.character(md$tissue[idx]),
+    broad_celltype=proj$projected_label
+  )[,.(n_cells=.N),by=.(dataset,tissue,broad_celltype)]
+
+  print(DimPlot(sk,reduction="umap",group.by="seurat_clusters",label=TRUE,repel=TRUE)+
+        ggtitle(paste(dataset_name,"clusters")))
   print(DimPlot(sk,reduction="umap",group.by="broad_celltype_cluster",label=TRUE,repel=TRUE)+
-        ggtitle(paste(dataset_name,"broad-cell sketch")))
-  dev.off()
+        ggtitle(paste(dataset_name,"broad cell type v2")))
+  print(DimPlot(sk,reduction="umap",group.by="tissue")+
+        ggtitle(paste(dataset_name,"tissue")))
+  if(is_reference&&"source_author_annotation"%in%colnames(sk[[]])){
+    print(DimPlot(sk,reduction="umap",group.by="source_author_annotation",label=FALSE)+
+          ggtitle("nature_xue source author annotation"))
+  }
   list(reference_matrix=reference_matrix,reference_labels=reference_labels)
 }
 
