@@ -119,7 +119,8 @@ cluster_marker_annotation <- function(sketch,markers_de,author_broad=NULL){
     top <- names(v)[ord[[1]]]; second <- if(length(ord)>1) v[ord[[2]]] else -Inf
     data.table(cluster=k,marker_label=top,marker_score=v[ord[[1]]],
                marker_margin=v[ord[[1]]]-second,marker_hits=hits[k,top],
-               neutrophil_core_hits=sum(neutrophil_core%in%topgenes))
+               neutrophil_core_hits=sum(neutrophil_core%in%topgenes),
+               cd3_core_hits=sum(c("CD3D","CD3E","TRAC")%in%topgenes))
   }))
   if(!is.null(author_broad)){
     author_broad[author_broad=="Uncertain/Mixed"] <- NA_character_
@@ -243,6 +244,8 @@ run_dataset <- function(dataset_name,is_reference=FALSE,reference_matrix=NULL,re
   ct[,marker_strong:=marker_hits>=2&marker_margin>=0.15]
   ct[marker_label=="Neutrophil",
      marker_strong:=marker_strong&neutrophil_core_hits>=1]
+  ct[marker_label=="NK_cell",
+     marker_strong:=marker_strong&cd3_core_hits==0]
   ct[,c("broad_reference_label","broad_reference_score","final_label",
         "final_confidence","final_basis") :=
        list(NA_character_,NA_real_,"Uncertain/Mixed","uncertain","conflict_or_insufficient")]
