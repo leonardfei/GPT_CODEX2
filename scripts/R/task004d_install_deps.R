@@ -17,13 +17,10 @@ if (getRversion() < "4.3.0" || getRversion() >= "4.4.0") {
   stop("This dependency lane requires R 4.3.x / Bioconductor 3.18; found ", R.version.string)
 }
 
-# Use the archived Bioconductor 3.18 repositories directly. BiocManager's
-# config endpoint is not reachable from this server, while the archive mirror
-# is. Only software and annotation repositories are needed by these packages.
-bioc_base <- paste0(
-  "https://mghp.osn.xsede.org/bir190004-bucket01/",
-  "archive.bioconductor.org/packages/3.18"
-)
+# Use the Bioconductor 3.18 repositories directly. BiocManager's config
+# endpoint is not reachable from this server. Only software and annotation
+# repositories are needed by these packages.
+bioc_base <- "https://bioconductor.statistik.tu-dortmund.de/packages/3.18"
 options(repos = c(
   BioCsoft = paste0(bioc_base, "/bioc"),
   BioCann = paste0(bioc_base, "/data/annotation"),
