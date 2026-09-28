@@ -118,9 +118,11 @@ cluster_marker_annotation <- function(sketch,markers_de,author_broad=NULL){
     v <- score[k,]; ord <- order(v,decreasing=TRUE)
     top <- names(v)[ord[[1]]]; second <- if(length(ord)>1) v[ord[[2]]] else -Inf
     data.table(cluster=k,marker_label=top,marker_score=v[ord[[1]]],
-               marker_margin=v[ord[[1]]]-second,marker_hits=hits[k,top])
+               marker_margin=v[ord[[1]]]-second,marker_hits=hits[k,top],
+               neutrophil_core_hits=sum(neutrophil_core%in%topgenes))
   }))
   if(!is.null(author_broad)){
+    author_broad[author_broad=="Uncertain/Mixed"] <- NA_character_
     anchor <- data.table(cluster=cl,author_broad=author_broad)[!is.na(author_broad),
       .(anchor_label=names(sort(table(author_broad),decreasing=TRUE))[1],
         anchor_purity=max(table(author_broad))/.N,n_anchor=.N),by=cluster]
@@ -197,19 +199,28 @@ run_dataset <- function(dataset_name,is_reference=FALSE,reference_matrix=NULL,re
   strata <- as.character(md$project_sample_id[idx])
   author_all <- if("source_author_annotation"%in%colnames(md)) map_author_broad(md$source_author_annotation[idx]) else rep(NA_character_,length(idx))
   if(is_reference&&any(!is.na(author_all))) strata <- paste(strata,ifelse(is.na(author_all),"unmapped",author_all),sep="||")
-  sk_idx <- stratified_sample(idx,strata,min(sketch_n,length(idx)),seed+match(dataset_name,datasets))
+  use_sketch <- length(idx)>250000L
+  sk_idx <- if(use_sketch) {
+    stratified_sample(idx,strata,min(sketch_n,length(idx)),seed+match(dataset_name,datasets))
+  } else idx
   x <- counts_layer[shared_genes,sk_idx,drop=FALSE]
   sk <- CreateSeuratObject(counts=x,assay="RNA",project=dataset_name,meta.data=md[sk_idx,,drop=FALSE])
   sk <- NormalizeData(sk,normalization.method="LogNormalize",scale.factor=10000,verbose=FALSE)
   sk <- FindVariableFeatures(sk,selection.method="vst",nfeatures=min(3000,nrow(sk)),verbose=FALSE)
   hvg <- VariableFeatures(sk)
+  hvg <- hvg[!grepl("^MT-|^RPL|^RPS",hvg,ignore.case=TRUE)]
+  if(length(hvg)<1000) stop("Too few non-mito/ribosomal HVGs for ",dataset_name)
   sk <- ScaleData(sk,features=hvg,verbose=FALSE)
-  npcs <- min(50,length(hvg)-1L)
+  npcs <- min(30,length(hvg)-1L)
   sk <- RunPCA(sk,features=hvg,npcs=npcs,verbose=FALSE)
-  nd <- min(30,npcs)
-  sk <- FindNeighbors(sk,reduction="pca",dims=seq_len(nd),verbose=FALSE)
-  sk <- FindClusters(sk,resolution=resolution,random.seed=seed,verbose=FALSE)
-  sk <- RunUMAP(sk,reduction="pca",dims=seq_len(nd),seed.use=seed,verbose=FALSE)
+  sk <- FindNeighbors(sk,reduction="pca",dims=seq_len(npcs),verbose=FALSE)
+  sk <- FindClusters(sk,resolution=c(0.4,0.8),random.seed=seed,verbose=FALSE)
+  res08 <- grep("res\\.0\\.8$|res\\.0.8$",colnames(sk[[]]),value=TRUE)
+  if(!length(res08)) res08 <- grep("0.8$",colnames(sk[[]]),value=TRUE)
+  if(!length(res08)) stop("Could not identify resolution 0.8 cluster column for ",dataset_name)
+  Idents(sk) <- sk[[res08[[1]]]][,1]
+  sk$broad_cluster_resolution <- "0.8"
+  sk <- RunUMAP(sk,reduction="pca",dims=seq_len(npcs),seed.use=seed,verbose=FALSE)
   de <- FindAllMarkers(sk,only.pos=TRUE,min.pct=0.15,logfc.threshold=0.25,
                        max.cells.per.ident=3000,random.seed=seed,verbose=FALSE)
   if(nrow(de)){de$dataset <- dataset_name; de_rows[[dataset_name]] <<- as.data.table(de)}
