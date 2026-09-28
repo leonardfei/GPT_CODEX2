@@ -1,7 +1,9 @@
 # Project Status
 
 ## Current task
-Task 004d — per-sample scDblFinder filtering and corrected broad cell-type annotation — READY TO EXECUTE
+Task 004d — per-sample scDblFinder filtering and corrected broad cell-type annotation — BLOCKED / APPROVED
+
+The canonical implementation is ready, and the read-only input preflight passed on 2026-09-28. Execution is currently blocked before Phase A: the compute-server dependency installation had not completed at the last verified check, and server access must be re-established through a safe authentication method. No doublet calls, singlet object, or corrected broad annotation have been generated. See `reports/task_004d_report.md`.
 
 Task 004c is COMPLETED:
 - 1,490,852 cells;

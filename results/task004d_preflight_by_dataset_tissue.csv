@@ -1,0 +1,17 @@
+dataset,tissue,n_cells,n_samples,n_patients,n_candidate_neutrophils,n_zero_count_metadata,n_zero_feature_metadata
+GSE282701,Tumor,73145,6,6,836,0,0
+GSE282701,Adjacent,64373,6,6,4720,0,0
+GSE242889,Adjacent,26403,5,5,2489,0,0
+GSE242889,Tumor,26551,5,5,322,0,0
+GSE326201,Adjacent,38140,8,8,879,0,0
+GSE326201,Tumor,54824,10,10,694,0,0
+GSE149614,Tumor,34414,10,10,168,0,0
+GSE149614,Adjacent,28687,8,8,1328,0,0
+GSE299340,Tumor,38567,5,5,1127,0,0
+GSE299340,Adjacent,37752,5,5,3176,0,0
+CRA002308,Adjacent,67143,7,7,6437,0,0
+CRA002308,Tumor,91598,7,7,3367,0,0
+nature_xue,Tumor,612344,82,79,9676,0,0
+nature_xue,Adjacent,63195,10,10,6559,0,0
+in_house,Tumor,107850,10,10,9708,0,0
+in_house,Adjacent,125866,10,10,14060,0,0

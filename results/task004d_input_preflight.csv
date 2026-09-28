@@ -1,0 +1,2 @@
+source_qs,source_size_bytes,source_sha256,n_cells,n_features,n_datasets,n_samples,n_patients,n_candidate_neutrophils,counts_layer,counts_representation,software_R,qs_version,Seurat_version,SeuratObject_version
+/data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas/objects/merge/HCC_TA_8datasets_merged_review_v1.qs,4562511399,1ac8c7ba371879509fa44b1cb2626f0e85fae5da12a035dee27879a097eb6352,1490852,38025,8,194,132,65546,RNA/counts,task004b_chunked_counts,R version 4.3.3 (2024-02-29),0.27.3,5.3.0,5.2.0
