@@ -7,11 +7,41 @@ lib <- file.path(root, ".task004d_Rlib")
 fallback_lib <- file.path(root, ".task004b_Rlib")
 dir.create(lib, recursive = TRUE, showWarnings = FALSE)
 .libPaths(c(lib, fallback_lib, .libPaths()))
+env_prefix <- file.path(root, "tmp", "r_env")
 Sys.setenv(PATH = paste(
-  "/usr/bin", file.path(root, "tmp", "r_env", "bin"), Sys.getenv("PATH"),
+  "/usr/bin", file.path(env_prefix, "bin"), Sys.getenv("PATH"),
   sep = .Platform$path.sep
 ))
+Sys.setenv(
+  PKG_CONFIG_PATH = paste(file.path(env_prefix, "lib", "pkgconfig"),
+                          Sys.getenv("PKG_CONFIG_PATH"), sep = .Platform$path.sep),
+  LD_LIBRARY_PATH = paste(file.path(env_prefix, "lib"),
+                          Sys.getenv("LD_LIBRARY_PATH"), sep = .Platform$path.sep)
+)
 options(download.file.method = "curl", timeout = 1800)
+
+# Fail before downloading R source packages if the project Conda prefix lacks
+# the native build tools used by systemfonts, Cairo, XML, RCurl, and Rhtslib.
+pkg_config <- Sys.which("pkg-config")
+if (!nzchar(pkg_config)) {
+  stop("Missing native dependency: pkg-config is required in ", env_prefix,
+       ". Install pkg-config in the project environment before retrying.")
+}
+pkg_config_status <- system2(
+  pkg_config,
+  c("--exists", "cairo", "freetype2", "fontconfig", "libxml-2.0"),
+  stdout = FALSE, stderr = FALSE
+)
+if (!identical(pkg_config_status, 0L)) {
+  stop("pkg-config cannot locate cairo, freetype2, fontconfig, and libxml-2.0 ",
+       "in the project environment: ", env_prefix)
+}
+native_files <- c(file.path(env_prefix, "include", "lzma.h"),
+                  file.path(env_prefix, "lib", "liblzma.so"))
+if (!all(file.exists(native_files))) {
+  stop("Missing XZ/liblzma development files in the project environment: ",
+       paste(native_files[!file.exists(native_files)], collapse = ", "))
+}
 
 if (getRversion() < "4.3.0" || getRversion() >= "4.4.0") {
   stop("This dependency lane requires R 4.3.x / Bioconductor 3.18; found ", R.version.string)
