@@ -1,7 +1,7 @@
 # Task 005 — Eight-cohort Seurat v5 integration
 
 ## Status
-PENDING — BLOCKED UNTIL TASK 004c FEATURE HARMONISATION IS REVIEWED
+PENDING — BLOCKED UNTIL TASK 004d DOUBLEt FILTERING AND BROAD ANNOTATION ARE REVIEWED
 
 ## Goal
 Integrate all cohorts approved after Tasks 003–004 into one traceable HCC Tumor–Adjacent atlas while preserving raw/source expression, biological provenance and abundance-eligibility metadata.
@@ -17,6 +17,17 @@ Integrate all cohorts approved after Tasks 003–004 into one traceable HCC Tumo
 - in_house
 
 If Task 003 or Task 004 marks a cohort technically incompatible or blocked, do not silently omit it. Record the blocker and stop for review.
+
+## Task 004d prerequisite
+Do not start integration from the unfiltered Task 004c merged object.
+
+Use the validated Task 004d singlet-only object with `broad_celltype_v2` annotation as the biological starting point. Task 004 preliminary labels are audit-only.
+
+Expected Task 004d input for this task:
+- `objects/merge/HCC_TA_8datasets_singlets_broad_v1.qs`
+- and, when validated, `objects/merge/HCC_TA_8datasets_singlets_broad_v1.h5ad`.
+
+Task 005 must preserve scDblFinder provenance and the v2 broad annotation.
 
 ## Feature harmonisation prerequisite
 Use the validated merged HGNC object from Task 004c, not the 68,394-feature raw-union object, for cross-cohort normalization/HVG/integration.
@@ -48,7 +59,7 @@ If the full nature_xue HCC Tumor/AL subset makes full-cell RPCA infeasible under
 - author-processed expression preserved for nature_xue;
 - counts availability explicitly recorded;
 - dataset/sample/patient/tissue provenance retained;
-- `source_author_annotation`, `project_broad_celltype`, `neutrophil_confidence`, `qc_provenance`, `qc_status`, and `abundance_eligible` retained;
+- `source_author_annotation`, `broad_celltype_v2`, `broad_annotation_confidence`, scDblFinder provenance, `qc_provenance`, `qc_status`, and `abundance_eligible` retained;
 - unintegrated representation preserved alongside integrated reduction where practical;
 - integration inspected by dataset, patient, tissue, broad cell type and QC provenance;
 - overcorrection/undercorrection assessed;
