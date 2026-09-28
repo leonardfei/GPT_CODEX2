@@ -15,6 +15,13 @@ out_qs <- arg_value("out-qs",file.path(root,"objects","merge","HCC_TA_8datasets_
 results_dir <- arg_value("results-dir",file.path(root,"results"))
 report_path <- arg_value("report",file.path(root,"reports","task_004d_scdblfinder_report.md"))
 seed_base <- as.integer(arg_value("seed","44000"))
+sdf_version <- packageVersion("scDblFinder")
+if(requireNamespace("xgboost",quietly=TRUE) &&
+   packageVersion("xgboost") >= package_version("3.1.0") &&
+   sdf_version < package_version("1.24.8")){
+  stop("scDblFinder >=1.24.8 is required with xgboost >=3.1; found scDblFinder ",
+       as.character(sdf_version)," and xgboost ",as.character(packageVersion("xgboost")))
+}
 dir.create(dirname(out_qs),recursive=TRUE,showWarnings=FALSE)
 dir.create(results_dir,recursive=TRUE,showWarnings=FALSE)
 dir.create(dirname(report_path),recursive=TRUE,showWarnings=FALSE)
@@ -56,6 +63,11 @@ if(!identical(Layers(obj[["RNA"]]),"counts")) stop("Expected one RNA counts laye
 counts_layer <- obj[["RNA"]]@layers[["counts"]]
 if(!inherits(counts_layer,"task004b_chunked_counts")) stop("Expected task004b_chunked_counts")
 md <- obj[[]]
+if(ncol(obj)!=1490852L) stop("Preflight cell count mismatch: ",ncol(obj))
+if(nrow(obj)!=38025L) stop("Preflight feature count mismatch: ",nrow(obj))
+if(uniqueN(md$dataset)!=8L) stop("Preflight dataset count mismatch")
+if("project_patient_id"%in%colnames(md) && uniqueN(md$project_patient_id)!=132L)
+  stop("Preflight project_patient_id count mismatch")
 if(!"project_sample_id"%in%colnames(md)){
   if(!all(c("dataset","sample_id")%in%colnames(md))) stop("Missing sample identifiers")
   md$project_sample_id <- paste(md$dataset,md$sample_id,sep="::")
@@ -159,8 +171,9 @@ names(obj@active.ident) <- new_cells
 obj@misc$task004d_scdblfinder <- list(
   source_qs=source_qs,version=as.character(packageVersion("scDblFinder")),
   detection_unit="project_sample_id",n_samples=length(capture_levels),
-  min_cells_for_scoring=min_cells,dbr="automatic",dbr_per1k=0.008,
-  nfeatures=1352,dims=20,seed_base=seed_base,n_cells_before=n_before,
+  dbr="automatic",dbr_per1k=0.008,dbr_sd=NULL,iter=2,
+  cluster_rule="clusters=TRUE for n>=500; clusters=NULL for n<500",
+  seed_base=seed_base,n_cells_before=n_before,
   n_doublets_removed=n_removed,n_cells_after=n_after,
   preliminary_neutrophils_before=neut_before,
   preliminary_neutrophils_removed=neut_removed,
@@ -210,7 +223,7 @@ val <- data.table(status="VALIDATED",source_qs=source_qs,filtered_qs=out_qs,
   preliminary_neutrophils_before=neut_before,
   preliminary_neutrophils_removed=neut_removed,
   preliminary_neutrophil_retention=neut_ret,
-  scDblFinder_version=as.character(packageVersion("scDblFinder")))
+  scDblFinder_version=as.character(sdf_version))
 fwrite(val,file.path(results_dir,"task004d_scdblfinder_validation.csv"))
 writeLines(c("# Task 004d report - scDblFinder",
   "","## Status","COMPLETED","",
