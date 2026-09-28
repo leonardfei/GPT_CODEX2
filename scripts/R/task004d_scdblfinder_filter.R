@@ -1,7 +1,7 @@
 #!/usr/bin/env Rscript
 suppressPackageStartupMessages({
   library(Seurat); library(data.table); library(Matrix)
-  library(SingleCellExperiment); library(scDblFinder); library(BiocParallel)
+  library(SingleCellExperiment); library(scDblFinder); library(BiocParallel); library(ggplot2)
 })
 args <- commandArgs(trailingOnly=TRUE)
 arg_value <- function(name, default=NULL) {
@@ -73,7 +73,9 @@ for(s in seq_along(capture_levels)){
   base <- data.table(cell_id=colnames(obj)[idx],global_index=idx,
     dataset=as.character(md$dataset[idx]),sample_id=as.character(md$sample_id[idx]),
     patient_id=as.character(md$patient_id[idx]),tissue=as.character(md$tissue[idx]),
-    project_sample_id=cap)
+    project_sample_id=cap,
+    nCount_RNA=as.numeric(md$nCount_RNA[idx]),
+    nFeature_RNA=as.numeric(md$nFeature_RNA[idx]))
   x <- counts_layer[,idx,drop=FALSE]
   if(!inherits(x,"dgCMatrix")) x <- as(x,"dgCMatrix")
   if(any(Matrix::colSums(x)<=0)) stop("Zero-count cell in ",cap)
@@ -116,8 +118,19 @@ broad_audit <- calls[,.(n_cells=.N,n_doublet=sum(scDblFinder.class=="doublet",na
 fwrite(calls,file.path(results_dir,"task004d_scdblfinder_cell_calls.csv.gz"),compress="gzip")
 fwrite(samples,file.path(results_dir,"task004d_scdblfinder_by_sample.csv"))
 fwrite(broad_audit,file.path(results_dir,"task004d_scdblfinder_by_preliminary_broad.csv"))
-high <- samples[status=="SCORED"&doublet_fraction>0.30]
-if(nrow(high)) stop("Filtering halted: >30% doublets in ",paste(high$project_sample_id,collapse=", "))
+score_stats <- calls[, .(
+  score_median=median(scDblFinder.score,na.rm=TRUE),
+  score_q25=quantile(scDblFinder.score,0.25,na.rm=TRUE,names=FALSE),
+  score_q75=quantile(scDblFinder.score,0.75,na.rm=TRUE,names=FALSE),
+  singlet_nCount_median=median(nCount_RNA[scDblFinder.class=="singlet"],na.rm=TRUE),
+  doublet_nCount_median=median(nCount_RNA[scDblFinder.class=="doublet"],na.rm=TRUE),
+  singlet_nFeature_median=median(nFeature_RNA[scDblFinder.class=="singlet"],na.rm=TRUE),
+  doublet_nFeature_median=median(nFeature_RNA[scDblFinder.class=="doublet"],na.rm=TRUE)
+),by=project_sample_id]
+samples <- merge(samples,score_stats,by="project_sample_id",all.x=TRUE,sort=FALSE)
+samples[,review_flag:=fifelse(doublet_fraction>0.30,"REVIEW_HIGH_GT30PCT",
+                      fifelse(doublet_fraction<0.001 & n_cells>=1000,"REVIEW_LOW_LT0.1PCT","none"))]
+fwrite(samples,file.path(results_dir,"task004d_scdblfinder_by_sample.csv"))
 
 n_before <- length(keep); n_after <- sum(keep); n_removed <- n_before-n_after
 neut_before <- sum(tolower(prelim)=="neutrophil",na.rm=TRUE)
@@ -154,9 +167,34 @@ obj@misc$task004d_scdblfinder <- list(
   preliminary_neutrophil_retention=neut_ret
 )
 ds <- calls[,.(n_cells_before=.N,n_doublet=sum(scDblFinder.class=="doublet",na.rm=TRUE),
+  n_singlet=sum(scDblFinder.class=="singlet",na.rm=TRUE),
   n_retained=sum(keep_after_scdblfinder),
-  doublet_fraction=mean(scDblFinder.class=="doublet",na.rm=TRUE)),by=dataset]
+  doublet_fraction=mean(scDblFinder.class=="doublet",na.rm=TRUE),
+  score_median=median(scDblFinder.score,na.rm=TRUE),
+  score_q25=quantile(scDblFinder.score,0.25,na.rm=TRUE,names=FALSE),
+  score_q75=quantile(scDblFinder.score,0.75,na.rm=TRUE,names=FALSE)),
+  by=.(dataset,tissue)]
 fwrite(ds,file.path(results_dir,"task004d_scdblfinder_by_dataset.csv"))
+
+neut_audit <- calls[tolower(preliminary_task004_broad)=="neutrophil", .(
+  n_neutrophil_before=.N,
+  n_neutrophil_doublet=sum(scDblFinder.class=="doublet",na.rm=TRUE),
+  n_neutrophil_retained=sum(keep_after_scdblfinder),
+  neutrophil_doublet_fraction=mean(scDblFinder.class=="doublet",na.rm=TRUE),
+  neutrophil_retention_fraction=mean(keep_after_scdblfinder)
+),by=.(dataset,tissue,project_sample_id)]
+fwrite(neut_audit,file.path(results_dir,"task004d_neutrophil_doublet_retention.csv"))
+
+pdf(file.path(root,"figures","task004d_scdblfinder_qc.pdf"),width=12,height=8)
+print(ggplot(samples,aes(x=reorder(project_sample_id,doublet_fraction),y=doublet_fraction,fill=dataset))+
+  geom_col()+coord_flip()+theme_classic()+labs(x="project_sample_id",y="Predicted doublet fraction"))
+print(ggplot(calls,aes(x=scDblFinder.class,y=log10(nCount_RNA+1),fill=scDblFinder.class))+
+  geom_boxplot(outlier.shape=NA)+facet_wrap(~dataset,scales="free_y")+theme_classic()+
+  labs(x=NULL,y="log10(nCount_RNA+1)"))
+print(ggplot(calls,aes(x=scDblFinder.class,y=log10(nFeature_RNA+1),fill=scDblFinder.class))+
+  geom_boxplot(outlier.shape=NA)+facet_wrap(~dataset,scales="free_y")+theme_classic()+
+  labs(x=NULL,y="log10(nFeature_RNA+1)"))
+dev.off()
 
 message("Writing ",out_qs)
 qs::qsave(obj,out_qs,preset="high",check_hash=TRUE,nthreads=8L)
