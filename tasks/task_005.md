@@ -1,7 +1,7 @@
 # Task 005 — Eight-cohort Seurat v5 integration
 
 ## Status
-PENDING — BLOCKED UNTIL TASK 004d DOUBLEt FILTERING AND BROAD ANNOTATION ARE REVIEWED
+PENDING — BLOCKED UNTIL TASK 004d DOUBLET FILTERING AND BROAD ANNOTATION ARE REVIEWED
 
 ## Goal
 Integrate all cohorts approved after Tasks 003–004 into one traceable HCC Tumor–Adjacent atlas while preserving raw/source expression, biological provenance and abundance-eligibility metadata.
@@ -30,20 +30,12 @@ Expected Task 004d input for this task:
 Task 005 must preserve scDblFinder provenance and the v2 broad annotation.
 
 ## Feature harmonisation prerequisite
-Use the validated merged HGNC object from Task 004c, not the 68,394-feature raw-union object, for cross-cohort normalization/HVG/integration.
-
-Primary analysis objects after Task 004c:
-- objects/HCC_TA_8datasets_merged_review_v1.qs
-- objects/HCC_TA_8datasets_merged_review_v1.h5ad
-
-These existing paths are overwritten by Task 004c and will contain HGNC-standardised features after validation.
+Task 004d inherits the validated HGNC-standardised feature space from Task 004c. Do not restart Task 005 from the older unfiltered Task 004c merged object.
 
 Candidate integration feature universe:
-results/task004c_shared_hgnc_features_8of8.txt
+`results/task004c_shared_hgnc_features_8of8.txt`
 
-Select HVGs/integration features from this shared HGNC universe. For raw-union/custom-feature provenance checks, use upstream cohort/source objects or the retained Task 004b checkpoint.
-
-Do not require eight separate harmonised cohort files; split or index the merged HGNC object by dataset as needed for integration.
+Select HVGs/integration features from this shared HGNC universe while using the Task 004d singlet-only object as the cell-level input. For raw-union/custom-feature provenance checks, use upstream cohort/source objects or the retained Task 004b checkpoint.
 
 ## Default approach
 Use Seurat v5 RPCA integration as the default, with parameters chosen after inspecting object sizes, shared features and normalization state.
