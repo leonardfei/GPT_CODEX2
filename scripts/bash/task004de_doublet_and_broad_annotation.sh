@@ -15,7 +15,7 @@ FINAL="${ROOT}/objects/merge/HCC_TA_8datasets_singlets_broad_v1.qs"
   exit 2
 }
 
-export R_LIBS_USER="${ROOT}/.task004de_Rlib:${ROOT}/.task004b_Rlib"
+export R_LIBS_USER="${ROOT}/.task004d_Rlib:${ROOT}/.task004b_Rlib"
 
 echo "=== Task 004d dependency check/install ==="
 Rscript scripts/R/task004de_install_deps.R "${ROOT}"
