@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript
 suppressPackageStartupMessages({
-  library(Seurat); library(data.table); library(Matrix); library(SingleR)
+  library(Seurat); library(data.table); library(Matrix); library(SingleR); library(ggplot2)
 })
 args <- commandArgs(trailingOnly=TRUE)
 arg_value <- function(name, default=NULL){
@@ -134,6 +134,35 @@ cluster_marker_annotation <- function(sketch,markers_de,author_broad=NULL){
   out
 }
 
+cluster_program_evidence <- function(sketch,dataset_name){
+  cl <- as.character(Idents(sketch))
+  clusters <- sort(unique(cl))
+  norm <- LayerData(sketch[["RNA"]],layer="data")
+  cnt <- LayerData(sketch[["RNA"]],layer="counts")
+  out <- list(); z <- 1L
+  for(k in clusters){
+    cells <- which(cl==k)
+    for(lb in names(marker_sets)){
+      g <- intersect(marker_sets[[lb]],rownames(sketch))
+      if(length(g)){
+        mean_expr <- mean(Matrix::rowMeans(norm[g,cells,drop=FALSE]))
+        det <- cnt[g,cells,drop=FALSE]>0
+        mean_det <- mean(Matrix::rowMeans(det))
+        ge2 <- mean(Matrix::colSums(det)>=2)
+      } else {
+        mean_expr <- NA_real_; mean_det <- NA_real_; ge2 <- NA_real_
+      }
+      out[[z]] <- data.table(dataset=dataset_name,cluster=k,program=lb,
+                             n_cells=length(cells),n_program_genes=length(g),
+                             mean_normalized_expression=mean_expr,
+                             mean_marker_detection_fraction=mean_det,
+                             fraction_cells_ge2_markers=ge2)
+      z <- z+1L
+    }
+  }
+  rbindlist(out,fill=TRUE)
+}
+
 normalize_sparse <- function(x,lib){
   sf <- 1e4/pmax(as.numeric(lib),1)
   y <- x%*%Diagonal(x=sf); y <- as(y,"dgCMatrix"); y@x <- log1p(y@x); y
@@ -202,8 +231,9 @@ if(!"nature_xue"%in%datasets) stop("nature_xue reference dataset missing")
 new_label <- rep(NA_character_,nrow(md)); new_conf <- rep(NA_character_,nrow(md))
 new_basis <- rep(NA_character_,nrow(md)); new_ref_label <- rep(NA_character_,nrow(md))
 new_ref_score <- rep(NA_real_,nrow(md)); new_cluster <- rep(NA_character_,nrow(md))
+cycling_state_global <- rep(NA_character_,nrow(md))
 proj_margin <- rep(NA_real_,nrow(md))
-cluster_rows <- list(); count_rows <- list(); de_rows <- list(); sketch_flags <- list()
+cluster_rows <- list(); count_rows <- list(); de_rows <- list(); sketch_flags <- list(); program_rows <- list()
 
 run_dataset <- function(dataset_name,is_reference=FALSE,reference_matrix=NULL,reference_labels=NULL){
   idx <- which(as.character(md$dataset)==dataset_name)
@@ -241,6 +271,22 @@ run_dataset <- function(dataset_name,is_reference=FALSE,reference_matrix=NULL,re
     map_author_broad(sk$source_author_annotation)
   } else NULL
   ct <- cluster_marker_annotation(sk,de,author_sk)
+  pe <- cluster_program_evidence(sk,dataset_name)
+  program_rows[[dataset_name]] <<- pe
+  prop <- pe[order(cluster,-mean_normalized_expression)]
+  top2 <- prop[, .(
+    program_top=program[[1]],
+    program_top_mean=mean_normalized_expression[[1]],
+    program_second=if(.N>=2) program[[2]] else NA_character_,
+    program_second_mean=if(.N>=2) mean_normalized_expression[[2]] else NA_real_
+  ),by=cluster]
+  ct <- merge(ct,top2,by="cluster",all.x=TRUE)
+  cycling_genes <- c("MKI67","TOP2A","UBE2C","CENPF","TYMS")
+  top_by_cluster <- split(de$gene,as.character(de$cluster))
+  ct[,cycling_state:=vapply(cluster,function(k){
+    tg <- unique(head(top_by_cluster[[k]],50))
+    if(sum(cycling_genes%in%tg)>=2) "cycling" else "noncycling"
+  },character(1))]
   ct[,marker_strong:=marker_hits>=2&marker_margin>=0.15]
   ct[marker_label=="Neutrophil",
      marker_strong:=marker_strong&neutrophil_core_hits>=1]
@@ -321,7 +367,9 @@ run_dataset <- function(dataset_name,is_reference=FALSE,reference_matrix=NULL,re
   map_basis <- setNames(ct$final_basis,ct$cluster)
   map_ref <- setNames(ct$broad_reference_label,ct$cluster)
   map_ref_score <- setNames(ct$broad_reference_score,ct$cluster)
+  map_cycle <- setNames(ct$cycling_state,ct$cluster)
   sk$broad_celltype_cluster <- map_final[as.character(Idents(sk))]
+  sk$broad_cycling_state <- map_cycle[as.character(Idents(sk))]
   saveRDS(sk,file.path(sketch_dir,paste0(dataset_name,"_broad_reference.rds")),compress=FALSE)
 
   if(is_reference){
@@ -346,6 +394,7 @@ run_dataset <- function(dataset_name,is_reference=FALSE,reference_matrix=NULL,re
                        annotation_basis=map_basis[cc],
                        reference_label=map_ref[cc],
                        reference_score=as.numeric(map_ref_score[cc]),
+                       cycling_state=map_cycle[cc],
                        projection_margin=1)
   }
 
@@ -355,6 +404,8 @@ run_dataset <- function(dataset_name,is_reference=FALSE,reference_matrix=NULL,re
   new_ref_label[idx] <<- proj$reference_label
   new_ref_score[idx] <<- proj$reference_score
   new_cluster[idx] <<- proj$reference_cluster
+  if(!"cycling_state"%in%colnames(proj)) proj$cycling_state <- map_cycle[proj$reference_cluster]
+  cycling_state_global[idx] <<- proj$cycling_state
   proj_margin[idx] <<- proj$projection_margin
   count_rows[[dataset_name]] <<- data.table(
     dataset=dataset_name,tissue=as.character(md$tissue[idx]),
@@ -367,9 +418,15 @@ run_dataset <- function(dataset_name,is_reference=FALSE,reference_matrix=NULL,re
         ggtitle(paste(dataset_name,"broad cell type v2")))
   print(DimPlot(sk,reduction="umap",group.by="tissue")+
         ggtitle(paste(dataset_name,"tissue")))
+  print(DimPlot(sk,reduction="pca",group.by="broad_celltype_cluster")+
+        ggtitle(paste(dataset_name,"PCA broad cell type v2")))
+  print(DimPlot(sk,reduction="pca",group.by="tissue")+
+        ggtitle(paste(dataset_name,"PCA tissue")))
   if(is_reference&&"source_author_annotation"%in%colnames(sk[[]])){
     print(DimPlot(sk,reduction="umap",group.by="source_author_annotation",label=FALSE)+
           ggtitle("nature_xue source author annotation"))
+    print(DimPlot(sk,reduction="pca",group.by="source_author_annotation",label=FALSE)+
+          ggtitle("nature_xue PCA source author annotation"))
   }
   list(reference_matrix=reference_matrix,reference_labels=reference_labels)
 }
@@ -408,6 +465,7 @@ obj$broad_cluster_id <- new_cluster
 obj$broad_cluster_resolution <- "0.8"
 obj$broad_reference_label <- new_ref_label
 obj$broad_reference_score <- new_ref_score
+obj$broad_cycling_state <- cycling_state_global
 obj$broad_projection_margin <- proj_margin
 obj$annotation_status <- "task004d_broad_annotation_v2"
 obj@misc$task004d_broad_annotation <- list(
@@ -441,6 +499,8 @@ all_counts[,dataset_total:=sum(n_cells),by=dataset]
 all_counts[,fraction_within_dataset:=n_cells/pmax(dataset_total,1)]
 fwrite(all_counts,file.path(results_dir,"task004d_broad_celltype_counts.csv"))
 fwrite(all_clusters,file.path(results_dir,"task004d_cluster_annotation.csv"))
+program_all <- rbindlist(program_rows,fill=TRUE,use.names=TRUE)
+fwrite(program_all,file.path(results_dir,"task004d_cluster_program_evidence.csv"))
 fwrite(sketch_summary,file.path(results_dir,"task004d_sketch_usage.csv"))
 if(length(de_rows)){
   markers_all <- rbindlist(de_rows,fill=TRUE,use.names=TRUE)
