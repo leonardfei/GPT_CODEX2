@@ -25,6 +25,7 @@ if(requireNamespace("xgboost",quietly=TRUE) &&
 dir.create(dirname(out_qs),recursive=TRUE,showWarnings=FALSE)
 dir.create(results_dir,recursive=TRUE,showWarnings=FALSE)
 dir.create(dirname(report_path),recursive=TRUE,showWarnings=FALSE)
+dir.create(file.path(root,"figures"),recursive=TRUE,showWarnings=FALSE)
 
 dim.task004b_chunked_counts <- function(x) c(length(x$feature_names),length(x$cell_names))
 dimnames.task004b_chunked_counts <- function(x) list(x$feature_names,x$cell_names)
@@ -76,18 +77,21 @@ req <- c("dataset","sample_id","patient_id","tissue","project_sample_id")
 if(length(setdiff(req,colnames(md)))) stop("Missing required metadata")
 capture_ids <- as.character(md$project_sample_id)
 capture_levels <- unique(capture_ids)
+if(length(capture_levels)!=194L) stop("Preflight project_sample_id count mismatch: ",length(capture_levels))
 
 calls_list <- vector("list",length(capture_levels))
 sample_list <- vector("list",length(capture_levels))
 for(s in seq_along(capture_levels)){
   cap <- capture_levels[[s]]; idx <- which(capture_ids==cap); n <- length(idx)
   message(sprintf("[%d/%d] %s: %d cells",s,length(capture_levels),cap,n))
+  count_col <- if("hgnc_nCount_RNA"%in%colnames(md)) "hgnc_nCount_RNA" else "nCount_RNA"
+  feature_col <- if("hgnc_nFeature_RNA"%in%colnames(md)) "hgnc_nFeature_RNA" else "nFeature_RNA"
   base <- data.table(cell_id=colnames(obj)[idx],global_index=idx,
     dataset=as.character(md$dataset[idx]),sample_id=as.character(md$sample_id[idx]),
     patient_id=as.character(md$patient_id[idx]),tissue=as.character(md$tissue[idx]),
     project_sample_id=cap,
-    nCount_RNA=as.numeric(md$nCount_RNA[idx]),
-    nFeature_RNA=as.numeric(md$nFeature_RNA[idx]))
+    nCount_RNA=as.numeric(md[[count_col]][idx]),
+    nFeature_RNA=as.numeric(md[[feature_col]][idx]))
   x <- counts_layer[,idx,drop=FALSE]
   if(!inherits(x,"dgCMatrix")) x <- as(x,"dgCMatrix")
   if(any(Matrix::colSums(x)<=0)) stop("Zero-count cell in ",cap)
@@ -186,8 +190,14 @@ ds <- calls[,.(n_cells_before=.N,n_doublet=sum(scDblFinder.class=="doublet",na.r
   score_median=median(scDblFinder.score,na.rm=TRUE),
   score_q25=quantile(scDblFinder.score,0.25,na.rm=TRUE,names=FALSE),
   score_q75=quantile(scDblFinder.score,0.75,na.rm=TRUE,names=FALSE)),
-  by=.(dataset,tissue)]
+  by=dataset]
 fwrite(ds,file.path(results_dir,"task004d_scdblfinder_by_dataset.csv"))
+tissue_ds <- calls[,.(n_cells_before=.N,
+  n_doublet=sum(scDblFinder.class=="doublet",na.rm=TRUE),
+  n_singlet=sum(scDblFinder.class=="singlet",na.rm=TRUE),
+  doublet_fraction=mean(scDblFinder.class=="doublet",na.rm=TRUE)),
+  by=.(dataset,tissue)]
+fwrite(tissue_ds,file.path(results_dir,"task004d_scdblfinder_by_dataset_tissue.csv"))
 
 neut_audit <- calls[tolower(preliminary_task004_broad)=="neutrophil", .(
   n_neutrophil_before=.N,
