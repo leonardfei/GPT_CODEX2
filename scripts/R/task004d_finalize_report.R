@@ -160,7 +160,7 @@ lines <- c(
     "Doublet-rate review flags were retained for inspection and did not trigger threshold retuning: ",
     paste(sample_high$project_sample_id,collapse=", "),"."
   ) else "No sample-level doublet-rate review flag was triggered.",
-  "Resolved runtime issues: the server's scDblFinder 1.16 API required the explicit legacy expected-rate equivalent; the initial Seurat accessor check and post-filter data.table row selection were corrected. The first complete scoring pass was preserved and validated for resume.",
+  "Resolved runtime issues: the server's scDblFinder 1.16 API required the explicit legacy expected-rate equivalent; Seurat accessor validation was namespaced; saved gzip calls were streamed without optional R.utils; data.table singlet selection and grouped median output types were corrected. The first complete scoring pass was preserved and validated for resume.",
   "No secondary UMI/nFeature doublet cutoff was used. No predicted doublet was rescued because of a preliminary cell-type label.",
   "",
   "## Hold point",

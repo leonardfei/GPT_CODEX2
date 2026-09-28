@@ -207,13 +207,13 @@ fwrite(calls,file.path(results_dir,"task004d_scdblfinder_cell_calls.csv.gz"),com
 fwrite(samples,file.path(results_dir,"task004d_scdblfinder_by_sample.csv"))
 fwrite(broad_audit,file.path(results_dir,"task004d_scdblfinder_by_preliminary_broad.csv"))
 score_stats <- calls[, .(
-  score_median=median(scDblFinder.score,na.rm=TRUE),
+  score_median=as.numeric(median(scDblFinder.score,na.rm=TRUE)),
   score_q25=quantile(scDblFinder.score,0.25,na.rm=TRUE,names=FALSE),
   score_q75=quantile(scDblFinder.score,0.75,na.rm=TRUE,names=FALSE),
-  singlet_nCount_median=median(nCount_RNA[scDblFinder.class=="singlet"],na.rm=TRUE),
-  doublet_nCount_median=median(nCount_RNA[scDblFinder.class=="doublet"],na.rm=TRUE),
-  singlet_nFeature_median=median(nFeature_RNA[scDblFinder.class=="singlet"],na.rm=TRUE),
-  doublet_nFeature_median=median(nFeature_RNA[scDblFinder.class=="doublet"],na.rm=TRUE)
+  singlet_nCount_median=as.numeric(median(nCount_RNA[scDblFinder.class=="singlet"],na.rm=TRUE)),
+  doublet_nCount_median=as.numeric(median(nCount_RNA[scDblFinder.class=="doublet"],na.rm=TRUE)),
+  singlet_nFeature_median=as.numeric(median(nFeature_RNA[scDblFinder.class=="singlet"],na.rm=TRUE)),
+  doublet_nFeature_median=as.numeric(median(nFeature_RNA[scDblFinder.class=="doublet"],na.rm=TRUE))
 ),by=project_sample_id]
 samples <- merge(samples,score_stats,by="project_sample_id",all.x=TRUE,sort=FALSE)
 samples[,review_flag:=fifelse(doublet_fraction>0.30,"REVIEW_HIGH_GT30PCT",
@@ -223,16 +223,16 @@ fwrite(samples,file.path(results_dir,"task004d_scdblfinder_by_sample.csv"))
 summarize_call_class <- function(d,group_cols,level_name){
   z <- d[,.(n_cells=.N,
     score_q25=quantile(scDblFinder.score,0.25,names=FALSE),
-    score_median=median(scDblFinder.score),
+    score_median=as.numeric(median(scDblFinder.score)),
     score_q75=quantile(scDblFinder.score,0.75,names=FALSE),
     nCount_q25=quantile(nCount_RNA,0.25,names=FALSE),
-    nCount_median=median(nCount_RNA),
+    nCount_median=as.numeric(median(nCount_RNA)),
     nCount_q75=quantile(nCount_RNA,0.75,names=FALSE),
     nFeature_q25=quantile(nFeature_RNA,0.25,names=FALSE),
-    nFeature_median=median(nFeature_RNA),
+    nFeature_median=as.numeric(median(nFeature_RNA)),
     nFeature_q75=quantile(nFeature_RNA,0.75,names=FALSE),
     percent_mt_q25=quantile(percent.mt,0.25,names=FALSE),
-    percent_mt_median=median(percent.mt),
+    percent_mt_median=as.numeric(median(percent.mt)),
     percent_mt_q75=quantile(percent.mt,0.75,names=FALSE)),
     by=c(group_cols,"scDblFinder.class")]
   z[,analysis_level:=level_name]
@@ -250,7 +250,7 @@ overall <- calls[,.(n_cells_before=.N,
   n_doublet=sum(scDblFinder.class=="doublet"),
   doublet_fraction=mean(scDblFinder.class=="doublet"),
   score_q25=quantile(scDblFinder.score,0.25,names=FALSE),
-  score_median=median(scDblFinder.score),
+  score_median=as.numeric(median(scDblFinder.score)),
   score_q75=quantile(scDblFinder.score,0.75,names=FALSE))]
 fwrite(overall,file.path(results_dir,"task004d_scdblfinder_overall.csv"))
 
@@ -277,11 +277,11 @@ distribution_phase <- function(d,phase){
   z <- copy(d); z[,audit_phase:=phase]
   z[,candidate_group:=fifelse(candidate_neutrophil,"candidate_neutrophil","other_cells")]
   z[,.(n_cells=.N,
-    nCount_q25=quantile(nCount_RNA,0.25,names=FALSE),nCount_median=median(nCount_RNA),
+    nCount_q25=quantile(nCount_RNA,0.25,names=FALSE),nCount_median=as.numeric(median(nCount_RNA)),
     nCount_q75=quantile(nCount_RNA,0.75,names=FALSE),
-    nFeature_q25=quantile(nFeature_RNA,0.25,names=FALSE),nFeature_median=median(nFeature_RNA),
+    nFeature_q25=quantile(nFeature_RNA,0.25,names=FALSE),nFeature_median=as.numeric(median(nFeature_RNA)),
     nFeature_q75=quantile(nFeature_RNA,0.75,names=FALSE),
-    percent_mt_q25=quantile(percent.mt,0.25,names=FALSE),percent_mt_median=median(percent.mt),
+    percent_mt_q25=quantile(percent.mt,0.25,names=FALSE),percent_mt_median=as.numeric(median(percent.mt)),
     percent_mt_q75=quantile(percent.mt,0.75,names=FALSE)),
     by=.(dataset,tissue,project_sample_id,audit_phase,candidate_group)]
 }
@@ -327,7 +327,7 @@ ds <- calls[,.(n_cells_before=.N,n_doublet=sum(scDblFinder.class=="doublet",na.r
   n_singlet=sum(scDblFinder.class=="singlet",na.rm=TRUE),
   n_retained=sum(keep_after_scdblfinder),
   doublet_fraction=mean(scDblFinder.class=="doublet",na.rm=TRUE),
-  score_median=median(scDblFinder.score,na.rm=TRUE),
+  score_median=as.numeric(median(scDblFinder.score,na.rm=TRUE)),
   score_q25=quantile(scDblFinder.score,0.25,na.rm=TRUE,names=FALSE),
   score_q75=quantile(scDblFinder.score,0.75,na.rm=TRUE,names=FALSE)),
   by=dataset]
