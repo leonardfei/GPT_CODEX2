@@ -101,7 +101,7 @@ reuse_call_table <- tolower(arg_value("reuse-call-table","false")) %in% c("true"
 if(reuse_call_table){
   if(!file.exists(calls_file)||!file.exists(sample_file))
     stop("Requested call-table reuse, but the all-cell calls or sample summary file is missing")
-  calls <- fread(calls_file)
+  calls <- fread(cmd=paste("gzip -dc --",shQuote(calls_file)))
   samples <- fread(sample_file)
   required_call_cols <- c("cell_id","global_index","dataset","sample_id","patient_id",
     "tissue","project_sample_id","nCount_RNA","nFeature_RNA","percent.mt",
