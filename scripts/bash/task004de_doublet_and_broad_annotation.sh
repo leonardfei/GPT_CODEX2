@@ -1,44 +1,56 @@
 #!/usr/bin/env bash
 set -euo pipefail
-ROOT="$1"
-if [[ -z "$ROOT" ]]; then
-  ROOT="/data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas"
-fi
-cd "$ROOT"
 
-SOURCE="$ROOT/objects/merge/HCC_TA_8datasets_merged_review_v1.qs"
-FILTERED="$ROOT/objects/merge/HCC_TA_8datasets_merged_scdblfinder_filtered_v1.qs"
-ANNOTATED="$ROOT/objects/merge/HCC_TA_8datasets_merged_scdblfinder_filtered_broad_v1.qs"
+ROOT="${1:-/data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas}"
+cd "${ROOT}"
 
-[[ -s "$SOURCE" ]] || { echo "ERROR: missing source QS: $SOURCE" >&2; exit 2; }
+SOURCE="${ROOT}/objects/merge/HCC_TA_8datasets_merged_review_v1.qs"
+SINGLETS="${ROOT}/objects/merge/HCC_TA_8datasets_singlets_v1.qs"
+FINAL="${ROOT}/objects/merge/HCC_TA_8datasets_singlets_broad_v1.qs"
 
-export R_LIBS_USER="$ROOT/.task004de_Rlib:$ROOT/.task004b_Rlib"
+[[ -s "${SOURCE}" ]] || {
+  echo "ERROR: exact approved source QS is missing: ${SOURCE}" >&2
+  echo "Available merge candidates:" >&2
+  find "${ROOT}/objects/merge" -maxdepth 1 -type f \( -name '*.qs' -o -name '*.h5ad' \) -print >&2 || true
+  exit 2
+}
 
-Rscript scripts/R/task004de_install_deps.R "$ROOT"
+export R_LIBS_USER="${ROOT}/.task004de_Rlib:${ROOT}/.task004b_Rlib"
 
-echo "=== Task 004d: per-sample scDblFinder ==="
+echo "=== Task 004d dependency check/install ==="
+Rscript scripts/R/task004de_install_deps.R "${ROOT}"
+
+echo "=== Task 004d Phase A/B: per-sample scDblFinder and singlet object ==="
 Rscript scripts/R/task004d_scdblfinder_filter.R \
-  --project-root "$ROOT" \
-  --source-qs "$SOURCE" \
-  --out-qs "$FILTERED"
+  --project-root "${ROOT}" \
+  --source-qs "${SOURCE}" \
+  --out-qs "${SINGLETS}" \
+  --seed 44000
 
-grep -q VALIDATED "$ROOT/results/task004d_scdblfinder_validation.csv"
-[[ -s "$FILTERED" ]]
+grep -q VALIDATED "${ROOT}/results/task004d_scdblfinder_validation.csv"
+[[ -s "${SINGLETS}" ]]
 
-echo "=== Task 004e: broad annotation ==="
+echo "=== Task 004d Phase C: corrected broad annotation ==="
 Rscript scripts/R/task004e_broad_annotation.R \
-  --project-root "$ROOT" \
-  --source-qs "$FILTERED" \
-  --out-qs "$ANNOTATED" \
-  --shared-features "$ROOT/results/task004c_shared_hgnc_features_8of8.txt" \
+  --project-root "${ROOT}" \
+  --source-qs "${SINGLETS}" \
+  --out-qs "${FINAL}" \
+  --shared-features "${ROOT}/results/task004c_shared_hgnc_features_8of8.txt" \
+  --xue-map "${ROOT}/config/task004d_xue_author_to_broad.tsv" \
   --sketch-cells 50000 \
   --projection-block 2000 \
-  --resolution 0.6 \
   --seed 40500
 
-grep -q VALIDATED "$ROOT/results/task004e_broad_annotation_validation.csv"
-[[ -s "$ANNOTATED" ]]
+grep -q VALIDATED "${ROOT}/results/task004d_broad_annotation_validation.csv"
+[[ -s "${FINAL}" ]]
 
-echo "Task 004d/e completed."
-echo "Filtered:  $FILTERED"
-echo "Annotated: $ANNOTATED"
+echo "=== Task 004d final validation report ==="
+Rscript scripts/R/task004d_finalize_report.R "${ROOT}"
+
+[[ -s "${ROOT}/reports/task_004d_report.md" ]]
+[[ -s "${ROOT}/results/task004d_object_checksums.csv" ]]
+
+echo "Task 004d completed and validated."
+echo "Singlets: ${SINGLETS}"
+echo "Final broad-annotated singlets: ${FINAL}"
+echo "Task 005 remains paused."
