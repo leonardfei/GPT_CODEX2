@@ -1,0 +1,2 @@
+status,biological_review_flag,n_cells,n_features,n_datasets,n_broad_types,n_neutrophils,n_uncertain,uncertain_fraction,xue_author_broad_concordance,any_doublet_remaining,sketch_datasets
+VALIDATED,none,1375127,38025,8,11,37948,225604,0.16406048314083,0.833086024291244,FALSE,nature_xue

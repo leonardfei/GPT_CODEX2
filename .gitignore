@@ -38,3 +38,6 @@ raw_data/
 processed_data/
 objects/
 tmp/
+
+# Large per-cell Task 004d audit table is retained locally and on the server.
+results/task004d_scdblfinder_cell_calls.csv.gz

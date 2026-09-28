@@ -70,15 +70,17 @@ sketch_lines <- paste(
 )
 
 sample_high <- samp[review_flag!="none"]
-neut_before <- sum(neut$n_neutrophil_before,na.rm=TRUE)
-neut_doublet <- sum(neut$n_neutrophil_doublet,na.rm=TRUE)
+neut_before <- sum(neut$n_candidate_neutrophils_before,na.rm=TRUE)
+neut_doublet <- sum(neut$n_candidate_neutrophils_removed_doublet,na.rm=TRUE)
 neut_ret <- if(neut_before>0) 1-neut_doublet/neut_before else NA_real_
 
 lines <- c(
   "# Task 004d report — scDblFinder filtering and corrected broad annotation",
   "",
   "## Status",
-  "COMPLETED — VALIDATED",
+  if ("n_neutrophils" %in% names(aval) && aval$n_neutrophils[[1]] == 0)
+    "PARTIAL — technically validated; no final Neutrophil labels, scientific review required"
+  else "COMPLETED — VALIDATED",
   "",
   "## Reproducibility",
   paste0("- Runtime: ",R.version.string,
@@ -90,6 +92,8 @@ lines <- c(
          "; xgboost ",as.character(packageVersion("xgboost")),"."),
   "- Phase A/B: `TASK004D_REUSE_CALL_TABLE=TRUE bash scripts/bash/task004de_doublet_and_broad_annotation.sh /data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas` (validated all-cell calls reused; no models rerun).",
   "- Phase C: `Rscript scripts/R/task004e_broad_annotation.R --project-root /data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas --source-qs objects/merge/HCC_TA_8datasets_singlets_v1.qs --out-qs objects/merge/HCC_TA_8datasets_singlets_broad_v1.qs --shared-features results/task004c_shared_hgnc_features_8of8.txt --xue-map config/task004d_xue_author_to_broad.tsv --sketch-cells 50000 --projection-block 2000 --seed 40500`.",
+  "- Final QC reconciliation: `Rscript scripts/R/task004d_reconcile_cluster_annotations.R /data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas`; reused the saved marker table and per-dataset Seurat caches, without rerunning doublet calls, clustering, or marker tests.",
+  "- Broad QC figure-only re-render: `Rscript scripts/R/task004d_render_annotation_qc.R /data/lf_data/HCC_Peritumoral_Neutrophil_scRNA_Atlas`; reused saved Seurat reductions and corrected cluster labels, with a compact bottom legend for the many nature_xue author labels.",
   "- Annotation parameters: LogNormalize scale factor 10,000; up to 3,000 HVGs after mitochondrial/ribosomal exclusion; 30-PC PCA; resolutions 0.4/0.8 with 0.8 used; leverage sketch target 50,000; projection blocks 2,000; seed 40500.",
   "- H5AD interoperability export was not generated: the existing Task004c exporter targets an in-memory standard RNA counts matrix, while this final QS preserves counts in the project's custom chunked representation; safe direct reuse was not verified. The validated deliverable is the QS object with raw counts and v2 metadata.",
   "",
@@ -174,6 +178,7 @@ lines <- c(
     paste(sample_high$project_sample_id,collapse=", "),"."
   ) else "No sample-level doublet-rate review flag was triggered.",
   "Resolved runtime issues: the server's scDblFinder 1.16 API required the explicit legacy expected-rate equivalent; Seurat accessor validation was namespaced; saved gzip calls were streamed without optional R.utils; data.table singlet selection and grouped median output types were corrected. The validated first all-cell scoring pass was preserved and reused. A full-cell nature_xue attempt reached >135 GB RSS and was OOM-killed; the approved Seurat leverage-score sketch (50,000 cells) and block-wise PCA-centroid projection were then used. Sketch cells/counts/metadata were aligned explicitly by cell ID, and mapped cluster-label vectors were made unnamed before Seurat metadata assignment to prevent its names-as-cell-IDs overlap error. Seurat's optional `presto` acceleration was not installed; the standard Wilcoxon marker test completed.",
+  "During final QC, a scoping error was found in the original core-marker audit: neutrophil-core and CD3 hits had been copied from the last cluster into every cluster row. Per-cluster hit counts and all downstream reference decisions were recomputed from the preserved marker table and Seurat analysis caches using the original thresholds; doublet calls, cluster definitions, and raw counts were not changed.",
   "No secondary UMI/nFeature doublet cutoff was used. No predicted doublet was rescued because of a preliminary cell-type label.",
   "",
   "## Hold point",

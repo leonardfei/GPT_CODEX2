@@ -1,9 +1,9 @@
 # Project Status
 
 ## Current task
-Task 004d — per-sample scDblFinder filtering and corrected broad cell-type annotation — BLOCKED / APPROVED
+Task 004d — per-sample scDblFinder filtering and corrected broad cell-type annotation — COMPLETED / VALIDATED
 
-The canonical implementation is ready, and the read-only input preflight passed on 2026-09-28. Execution is currently blocked before Phase A: the compute-server dependency installation had not completed at the last verified check, and server access must be re-established through a safe authentication method. No doublet calls, singlet object, or corrected broad annotation have been generated. See `reports/task_004d_report.md`.
+The approved workflow completed on 2026-09-29. It retained 1,375,127 singlets from 1,490,852 source cells (115,725 predicted doublets removed; 7.76%). Preliminary Task 004 neutrophil retention was 90.70% (59,452/65,546). The final v2 object contains 1,375,127 cells, 38,025 features, 8 datasets, and 37,948 cells annotated as Neutrophil; no predicted doublets remain. A final QC audit discovered and corrected a cluster-marker scoping bug before completion; the correction reused preserved marker tables and Seurat caches without changing doublet calls, cluster definitions, or raw counts. Full details and checksum are in `reports/task_004d_report.md`.
 
 Task 004c is COMPLETED:
 - 1,490,852 cells;
@@ -41,19 +41,21 @@ Phase C:
 Approved task specification:
 `tasks/task_004d.md`
 
-## Implementation readiness
-The canonical Task 004d implementation is now present in the control repository:
+## Task 004d implementation and outputs
+The Task 004d implementation and reviewable outputs are present in the control repository:
 - `scripts/R/task004d_scdblfinder_filter.R`
 - `scripts/R/task004e_broad_annotation.R`
+- `scripts/R/task004d_reconcile_cluster_annotations.R`
+- `scripts/R/task004d_render_annotation_qc.R`
 - `scripts/R/task004d_finalize_report.R`
 - `scripts/R/task004de_install_deps.R`
 - `scripts/bash/task004de_doublet_and_broad_annotation.sh`
 - `config/task004d_xue_author_to_broad.tsv`
+- Key review outputs: sample/dataset QC, neutrophil retention audit, cluster marker/annotation tables, broad counts, validation summary, and QC PDFs under `results/` and `figures/`. The 96 MB per-cell doublet-call audit remains local and on the server, excluded from Git due to size.
+- Large QS objects and the pre-correction recovery copy remain on the compute server; they are not committed.
 
-Static delimiter/quote checks passed for all implementation scripts. Server-side execution has not yet been recorded; Task 004d remains incomplete until the runtime outputs validate and the final report is committed.
-
-## Next Codex command
-`Execute task_004d.`
+## Next action
+Review the Task 004d report and QC outputs. Keep Task 005 paused until the annotation is explicitly approved.
 
 ## Hold point
-Task 005 remains PAUSED until Task 004d doublet filtering and v2 broad annotation have been reviewed.
+Task 005 remains PAUSED until the completed Task 004d QC and v2 broad annotation have been reviewed and explicitly approved.

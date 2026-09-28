@@ -107,6 +107,10 @@ cluster_marker_annotation <- function(sketch,markers_de,author_broad=NULL){
   out <- rbindlist(lapply(clusters,function(k){
     v <- score[k,]; ord <- order(v,decreasing=TRUE)
     top <- names(v)[ord[[1]]]; second <- if(length(ord)>1) v[ord[[2]]] else -Inf
+    # Compute cluster-specific core-marker support here. `topgenes` from the
+    # preceding loop is out of scope semantically and would otherwise retain
+    # only the final cluster's genes for every row below.
+    topgenes <- unique(head(top_by_cluster[[k]],50))
     data.table(cluster=k,marker_label=top,marker_score=v[ord[[1]]],
                marker_margin=v[ord[[1]]]-second,marker_hits=hits[k,top],
                neutrophil_core_hits=sum(neutrophil_core%in%topgenes),
@@ -456,9 +460,13 @@ run_dataset <- function(dataset_name,is_reference=FALSE,reference_matrix=NULL,re
         ggtitle(paste(dataset_name,"PCA tissue")))
   if(is_reference&&"source_author_annotation"%in%colnames(sk[[]])){
     print(DimPlot(sk,reduction="umap",group.by="source_author_annotation",label=FALSE)+
-          ggtitle("nature_xue source author annotation"))
+          ggtitle("nature_xue source author annotation")+
+          guides(color=guide_legend(ncol=5,byrow=TRUE))+
+          theme(legend.position="bottom",legend.text=element_text(size=5)))
     print(DimPlot(sk,reduction="pca",group.by="source_author_annotation",label=FALSE)+
-          ggtitle("nature_xue PCA source author annotation"))
+          ggtitle("nature_xue PCA source author annotation")+
+          guides(color=guide_legend(ncol=5,byrow=TRUE))+
+          theme(legend.position="bottom",legend.text=element_text(size=5)))
   }
   list(reference_matrix=reference_matrix,reference_labels=reference_labels)
 }

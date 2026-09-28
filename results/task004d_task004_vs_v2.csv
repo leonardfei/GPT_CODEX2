@@ -1,0 +1,712 @@
+dataset,task004_preliminary_label,broad_celltype_v2,n_cells
+GSE282701,other/uncertain,Endothelial,1162
+GSE282701,T/NK,T_cell,30568
+GSE282701,endothelial,Endothelial,15138
+GSE282701,other/uncertain,T_cell,2407
+GSE282701,dendritic,Endothelial,209
+GSE282701,fibroblast/mesenchymal,Endothelial,21
+GSE282701,fibroblast/mesenchymal,Fibroblast/Mesenchymal,4296
+GSE282701,hepatocyte/tumor epithelial,Endothelial,312
+GSE282701,T/NK,NK_cell,12570
+GSE282701,hepatocyte/tumor epithelial,Hepatocyte/Epithelial,12979
+GSE282701,neutrophil,Neutrophil,2619
+GSE282701,B,Monocyte/Macrophage,3015
+GSE282701,hepatocyte/tumor epithelial,T_cell,744
+GSE282701,other/uncertain,Monocyte/Macrophage,473
+GSE282701,monocyte/macrophage,Monocyte/Macrophage,4006
+GSE282701,B,T_cell,783
+GSE282701,mast,Uncertain/Mixed,161
+GSE282701,B,Endothelial,869
+GSE282701,other/uncertain,Fibroblast/Mesenchymal,214
+GSE282701,other/uncertain,Neutrophil,47
+GSE282701,fibroblast/mesenchymal,T_cell,2
+GSE282701,dendritic,T_cell,12
+GSE282701,monocyte/macrophage,Uncertain/Mixed,3321
+GSE282701,neutrophil,Endothelial,71
+GSE282701,monocyte/macrophage,Endothelial,696
+GSE282701,other/uncertain,Uncertain/Mixed,1455
+GSE282701,T/NK,Uncertain/Mixed,3887
+GSE282701,monocyte/macrophage,T_cell,960
+GSE282701,endothelial,Uncertain/Mixed,2329
+GSE282701,dendritic,Monocyte/Macrophage,573
+GSE282701,other/uncertain,NK_cell,282
+GSE282701,mast,T_cell,38
+GSE282701,neutrophil,Monocyte/Macrophage,23
+GSE282701,monocyte/macrophage,Neutrophil,140
+GSE282701,plasma,T_cell,245
+GSE282701,dendritic,NK_cell,12
+GSE282701,B,B_cell,3401
+GSE282701,neutrophil,Uncertain/Mixed,1088
+GSE282701,B,Uncertain/Mixed,5265
+GSE282701,plasma,Endothelial,113
+GSE282701,monocyte/macrophage,NK_cell,357
+GSE282701,T/NK,Endothelial,175
+GSE282701,dendritic,Fibroblast/Mesenchymal,306
+GSE282701,endothelial,T_cell,15
+GSE282701,B,NK_cell,93
+GSE282701,neutrophil,T_cell,768
+GSE282701,monocyte/macrophage,Fibroblast/Mesenchymal,91
+GSE282701,mast,Endothelial,4
+GSE282701,dendritic,Uncertain/Mixed,293
+GSE282701,plasma,Uncertain/Mixed,99
+GSE282701,T/NK,Monocyte/Macrophage,6
+GSE282701,mast,NK_cell,3
+GSE282701,neutrophil,NK_cell,261
+GSE282701,B,Fibroblast/Mesenchymal,39
+GSE282701,plasma,B_cell,536
+GSE282701,monocyte/macrophage,B_cell,62
+GSE282701,endothelial,Fibroblast/Mesenchymal,103
+GSE282701,dendritic,B_cell,3
+GSE282701,endothelial,NK_cell,1
+GSE282701,fibroblast/mesenchymal,Monocyte/Macrophage,2
+GSE282701,plasma,Fibroblast/Mesenchymal,49
+GSE282701,mast,Fibroblast/Mesenchymal,1
+GSE282701,hepatocyte/tumor epithelial,Uncertain/Mixed,3325
+GSE282701,hepatocyte/tumor epithelial,Fibroblast/Mesenchymal,181
+GSE282701,T/NK,Fibroblast/Mesenchymal,38
+GSE282701,neutrophil,Fibroblast/Mesenchymal,15
+GSE282701,plasma,Monocyte/Macrophage,7
+GSE282701,other/uncertain,B_cell,110
+GSE282701,plasma,NK_cell,32
+GSE282701,T/NK,B_cell,24
+GSE282701,neutrophil,B_cell,83
+GSE282701,fibroblast/mesenchymal,Uncertain/Mixed,5
+GSE282701,monocyte/macrophage,Hepatocyte/Epithelial,90
+GSE282701,hepatocyte/tumor epithelial,Monocyte/Macrophage,36
+GSE282701,hepatocyte/tumor epithelial,NK_cell,41
+GSE282701,B,Hepatocyte/Epithelial,56
+GSE282701,other/uncertain,Hepatocyte/Epithelial,42
+GSE282701,mast,Monocyte/Macrophage,2
+GSE282701,endothelial,Monocyte/Macrophage,2
+GSE282701,plasma,Hepatocyte/Epithelial,8
+GSE282701,T/NK,Hepatocyte/Epithelial,7
+GSE282701,hepatocyte/tumor epithelial,B_cell,4
+GSE282701,mast,Hepatocyte/Epithelial,1
+GSE282701,fibroblast/mesenchymal,Hepatocyte/Epithelial,1
+GSE282701,neutrophil,Hepatocyte/Epithelial,6
+GSE282701,endothelial,Hepatocyte/Epithelial,1
+GSE282701,dendritic,Hepatocyte/Epithelial,1
+GSE282701,mast,B_cell,1
+GSE242889,neutrophil,Uncertain/Mixed,1855
+GSE242889,T/NK,T_cell,4285
+GSE242889,other/uncertain,Uncertain/Mixed,315
+GSE242889,T/NK,NK_cell,1992
+GSE242889,endothelial,Endothelial,2109
+GSE242889,monocyte/macrophage,Monocyte/Macrophage,3155
+GSE242889,monocyte/macrophage,Uncertain/Mixed,1275
+GSE242889,B,Uncertain/Mixed,7888
+GSE242889,plasma,Plasma_cell,3223
+GSE242889,monocyte/macrophage,Hepatocyte/Epithelial,66
+GSE242889,B,Monocyte/Macrophage,3694
+GSE242889,hepatocyte/tumor epithelial,Hepatocyte/Epithelial,6729
+GSE242889,other/uncertain,T_cell,97
+GSE242889,B,B_cell,903
+GSE242889,B,T_cell,155
+GSE242889,monocyte/macrophage,NK_cell,200
+GSE242889,mast,Mast_cell,220
+GSE242889,fibroblast/mesenchymal,Uncertain/Mixed,365
+GSE242889,T/NK,Uncertain/Mixed,116
+GSE242889,T/NK,Hepatocyte/Epithelial,46
+GSE242889,neutrophil,T_cell,293
+GSE242889,T/NK,B_cell,58
+GSE242889,plasma,Uncertain/Mixed,239
+GSE242889,neutrophil,B_cell,54
+GSE242889,monocyte/macrophage,Endothelial,227
+GSE242889,monocyte/macrophage,B_cell,26
+GSE242889,T/NK,Endothelial,127
+GSE242889,monocyte/macrophage,T_cell,135
+GSE242889,monocyte/macrophage,Plasma_cell,73
+GSE242889,plasma,T_cell,112
+GSE242889,other/uncertain,Endothelial,67
+GSE242889,hepatocyte/tumor epithelial,B_cell,4
+GSE242889,B,Endothelial,506
+GSE242889,neutrophil,Plasma_cell,255
+GSE242889,other/uncertain,Plasma_cell,75
+GSE242889,plasma,Endothelial,155
+GSE242889,plasma,B_cell,24
+GSE242889,neutrophil,NK_cell,23
+GSE242889,plasma,NK_cell,94
+GSE242889,dendritic,Uncertain/Mixed,265
+GSE242889,other/uncertain,NK_cell,11
+GSE242889,other/uncertain,B_cell,16
+GSE242889,neutrophil,Endothelial,99
+GSE242889,B,Hepatocyte/Epithelial,14
+GSE242889,plasma,Hepatocyte/Epithelial,47
+GSE242889,dendritic,Endothelial,9
+GSE242889,hepatocyte/tumor epithelial,Uncertain/Mixed,6878
+GSE242889,neutrophil,Hepatocyte/Epithelial,15
+GSE242889,other/uncertain,Hepatocyte/Epithelial,6
+GSE242889,mast,NK_cell,1
+GSE242889,mast,Uncertain/Mixed,6
+GSE242889,B,NK_cell,14
+GSE242889,monocyte/macrophage,Mast_cell,1
+GSE242889,hepatocyte/tumor epithelial,T_cell,162
+GSE242889,hepatocyte/tumor epithelial,Endothelial,296
+GSE242889,hepatocyte/tumor epithelial,NK_cell,9
+GSE242889,mast,Endothelial,4
+GSE242889,neutrophil,Mast_cell,1
+GSE242889,T/NK,Plasma_cell,2
+GSE242889,B,Plasma_cell,5
+GSE242889,dendritic,Monocyte/Macrophage,19
+GSE242889,plasma,Monocyte/Macrophage,17
+GSE242889,hepatocyte/tumor epithelial,Plasma_cell,20
+GSE242889,other/uncertain,Monocyte/Macrophage,2
+GSE242889,neutrophil,Monocyte/Macrophage,5
+GSE242889,dendritic,T_cell,1
+GSE242889,hepatocyte/tumor epithelial,Monocyte/Macrophage,42
+GSE242889,B,Mast_cell,2
+GSE242889,other/uncertain,Mast_cell,1
+GSE242889,mast,Hepatocyte/Epithelial,1
+GSE242889,endothelial,Plasma_cell,2
+GSE242889,endothelial,Uncertain/Mixed,2
+GSE326201,T/NK,NK_cell,9580
+GSE326201,T/NK,T_cell,25611
+GSE326201,B,Uncertain/Mixed,5203
+GSE326201,dendritic,Endothelial,64
+GSE326201,other/uncertain,T_cell,1106
+GSE326201,B,B_cell,1927
+GSE326201,plasma,Plasma_cell,1093
+GSE326201,T/NK,Uncertain/Mixed,4996
+GSE326201,monocyte/macrophage,Endothelial,844
+GSE326201,dendritic,Fibroblast/Mesenchymal,1740
+GSE326201,endothelial,Endothelial,7145
+GSE326201,monocyte/macrophage,Uncertain/Mixed,1924
+GSE326201,neutrophil,Uncertain/Mixed,1175
+GSE326201,other/uncertain,Fibroblast/Mesenchymal,472
+GSE326201,monocyte/macrophage,Fibroblast/Mesenchymal,67
+GSE326201,monocyte/macrophage,Plasma_cell,13
+GSE326201,hepatocyte/tumor epithelial,Hepatocyte/Epithelial,4036
+GSE326201,neutrophil,T_cell,155
+GSE326201,other/uncertain,Endothelial,646
+GSE326201,B,T_cell,2110
+GSE326201,monocyte/macrophage,NK_cell,219
+GSE326201,other/uncertain,NK_cell,69
+GSE326201,monocyte/macrophage,Monocyte/Macrophage,3277
+GSE326201,neutrophil,NK_cell,40
+GSE326201,B,Endothelial,725
+GSE326201,neutrophil,B_cell,10
+GSE326201,B,Plasma_cell,3
+GSE326201,B,Monocyte/Macrophage,4369
+GSE326201,T/NK,Endothelial,35
+GSE326201,other/uncertain,B_cell,11
+GSE326201,B,NK_cell,66
+GSE326201,other/uncertain,Uncertain/Mixed,270
+GSE326201,monocyte/macrophage,T_cell,462
+GSE326201,dendritic,NK_cell,5
+GSE326201,other/uncertain,Plasma_cell,22
+GSE326201,plasma,T_cell,17
+GSE326201,hepatocyte/tumor epithelial,Endothelial,298
+GSE326201,plasma,NK_cell,1
+GSE326201,dendritic,Uncertain/Mixed,23
+GSE326201,plasma,Fibroblast/Mesenchymal,16
+GSE326201,fibroblast/mesenchymal,Fibroblast/Mesenchymal,3772
+GSE326201,T/NK,Monocyte/Macrophage,2
+GSE326201,B,Hepatocyte/Epithelial,7
+GSE326201,neutrophil,Endothelial,45
+GSE326201,monocyte/macrophage,Hepatocyte/Epithelial,36
+GSE326201,neutrophil,Fibroblast/Mesenchymal,29
+GSE326201,mast,Uncertain/Mixed,119
+GSE326201,hepatocyte/tumor epithelial,T_cell,844
+GSE326201,hepatocyte/tumor epithelial,Fibroblast/Mesenchymal,368
+GSE326201,T/NK,Fibroblast/Mesenchymal,16
+GSE326201,endothelial,Uncertain/Mixed,96
+GSE326201,mast,T_cell,27
+GSE326201,hepatocyte/tumor epithelial,Monocyte/Macrophage,35
+GSE326201,plasma,Endothelial,6
+GSE326201,hepatocyte/tumor epithelial,Uncertain/Mixed,384
+GSE326201,dendritic,T_cell,10
+GSE326201,mast,Fibroblast/Mesenchymal,4
+GSE326201,B,Fibroblast/Mesenchymal,31
+GSE326201,monocyte/macrophage,B_cell,4
+GSE326201,hepatocyte/tumor epithelial,NK_cell,1
+GSE326201,neutrophil,Plasma_cell,5
+GSE326201,other/uncertain,Hepatocyte/Epithelial,10
+GSE326201,endothelial,T_cell,4
+GSE326201,mast,NK_cell,1
+GSE326201,hepatocyte/tumor epithelial,B_cell,4
+GSE326201,other/uncertain,Monocyte/Macrophage,19
+GSE326201,fibroblast/mesenchymal,Endothelial,5
+GSE326201,mast,Monocyte/Macrophage,1
+GSE326201,dendritic,Monocyte/Macrophage,19
+GSE326201,dendritic,B_cell,3
+GSE326201,mast,Endothelial,1
+GSE326201,plasma,Uncertain/Mixed,44
+GSE326201,fibroblast/mesenchymal,T_cell,3
+GSE326201,T/NK,Hepatocyte/Epithelial,7
+GSE326201,fibroblast/mesenchymal,Hepatocyte/Epithelial,1
+GSE326201,T/NK,Plasma_cell,4
+GSE326201,endothelial,Hepatocyte/Epithelial,1
+GSE326201,neutrophil,Monocyte/Macrophage,3
+GSE326201,hepatocyte/tumor epithelial,Plasma_cell,1
+GSE326201,T/NK,B_cell,3
+GSE326201,endothelial,Fibroblast/Mesenchymal,2
+GSE326201,plasma,Monocyte/Macrophage,1
+GSE326201,fibroblast/mesenchymal,Uncertain/Mixed,1
+GSE326201,neutrophil,Hepatocyte/Epithelial,1
+GSE149614,hepatocyte/tumor epithelial,NK_cell,136
+GSE149614,T/NK,NK_cell,5887
+GSE149614,B,Monocyte/Macrophage,1833
+GSE149614,monocyte/macrophage,Monocyte/Macrophage,4565
+GSE149614,B,Uncertain/Mixed,3055
+GSE149614,endothelial,Endothelial,1102
+GSE149614,monocyte/macrophage,NK_cell,484
+GSE149614,other/uncertain,Uncertain/Mixed,262
+GSE149614,monocyte/macrophage,Uncertain/Mixed,3755
+GSE149614,fibroblast/mesenchymal,Fibroblast/Mesenchymal,938
+GSE149614,B,Endothelial,287
+GSE149614,hepatocyte/tumor epithelial,Fibroblast/Mesenchymal,604
+GSE149614,T/NK,Uncertain/Mixed,9777
+GSE149614,hepatocyte/tumor epithelial,Hepatocyte/Epithelial,9948
+GSE149614,hepatocyte/tumor epithelial,Endothelial,1222
+GSE149614,monocyte/macrophage,Endothelial,692
+GSE149614,T/NK,T_cell,1106
+GSE149614,B,NK_cell,214
+GSE149614,hepatocyte/tumor epithelial,Uncertain/Mixed,6580
+GSE149614,other/uncertain,NK_cell,115
+GSE149614,dendritic,NK_cell,17
+GSE149614,hepatocyte/tumor epithelial,T_cell,481
+GSE149614,monocyte/macrophage,Fibroblast/Mesenchymal,73
+GSE149614,dendritic,Fibroblast/Mesenchymal,18
+GSE149614,B,Fibroblast/Mesenchymal,11
+GSE149614,neutrophil,NK_cell,185
+GSE149614,mast,NK_cell,8
+GSE149614,fibroblast/mesenchymal,Endothelial,15
+GSE149614,dendritic,Endothelial,8
+GSE149614,B,T_cell,213
+GSE149614,B,B_cell,1103
+GSE149614,plasma,Plasma_cell,1811
+GSE149614,hepatocyte/tumor epithelial,Monocyte/Macrophage,208
+GSE149614,other/uncertain,Fibroblast/Mesenchymal,39
+GSE149614,B,Plasma_cell,10
+GSE149614,plasma,Uncertain/Mixed,257
+GSE149614,other/uncertain,Plasma_cell,17
+GSE149614,neutrophil,Uncertain/Mixed,1062
+GSE149614,monocyte/macrophage,Plasma_cell,22
+GSE149614,plasma,Monocyte/Macrophage,24
+GSE149614,other/uncertain,B_cell,20
+GSE149614,plasma,Fibroblast/Mesenchymal,86
+GSE149614,plasma,Endothelial,78
+GSE149614,monocyte/macrophage,B_cell,19
+GSE149614,neutrophil,Plasma_cell,7
+GSE149614,hepatocyte/tumor epithelial,B_cell,10
+GSE149614,hepatocyte/tumor epithelial,Plasma_cell,2
+GSE149614,dendritic,Uncertain/Mixed,18
+GSE149614,neutrophil,Endothelial,12
+GSE149614,neutrophil,B_cell,47
+GSE149614,T/NK,Endothelial,58
+GSE149614,monocyte/macrophage,T_cell,399
+GSE149614,mast,Endothelial,1
+GSE149614,plasma,T_cell,15
+GSE149614,other/uncertain,Endothelial,40
+GSE149614,plasma,B_cell,7
+GSE149614,plasma,NK_cell,76
+GSE149614,mast,Uncertain/Mixed,67
+GSE149614,plasma,Hepatocyte/Epithelial,5
+GSE149614,neutrophil,T_cell,26
+GSE149614,other/uncertain,T_cell,49
+GSE149614,T/NK,Fibroblast/Mesenchymal,7
+GSE149614,monocyte/macrophage,Hepatocyte/Epithelial,257
+GSE149614,mast,T_cell,3
+GSE149614,endothelial,Fibroblast/Mesenchymal,1
+GSE149614,neutrophil,Fibroblast/Mesenchymal,7
+GSE149614,neutrophil,Monocyte/Macrophage,2
+GSE149614,T/NK,B_cell,1
+GSE149614,other/uncertain,Monocyte/Macrophage,1
+GSE149614,T/NK,Hepatocyte/Epithelial,11
+GSE149614,endothelial,Uncertain/Mixed,2
+GSE149614,dendritic,Hepatocyte/Epithelial,6
+GSE149614,other/uncertain,Hepatocyte/Epithelial,17
+GSE149614,dendritic,T_cell,2
+GSE149614,endothelial,Hepatocyte/Epithelial,1
+GSE149614,B,Hepatocyte/Epithelial,2
+GSE149614,neutrophil,Hepatocyte/Epithelial,50
+GSE149614,mast,Fibroblast/Mesenchymal,1
+GSE299340,endothelial,Endothelial,1731
+GSE299340,T/NK,NK_cell,7258
+GSE299340,neutrophil,Neutrophil,2862
+GSE299340,T/NK,T_cell,19337
+GSE299340,monocyte/macrophage,Monocyte/Macrophage,5232
+GSE299340,B,Monocyte/Macrophage,2227
+GSE299340,other/uncertain,Endothelial,88
+GSE299340,other/uncertain,T_cell,781
+GSE299340,B,Uncertain/Mixed,3335
+GSE299340,neutrophil,NK_cell,126
+GSE299340,monocyte/macrophage,T_cell,851
+GSE299340,T/NK,Uncertain/Mixed,1896
+GSE299340,neutrophil,T_cell,394
+GSE299340,neutrophil,Uncertain/Mixed,531
+GSE299340,fibroblast/mesenchymal,Fibroblast/Mesenchymal,412
+GSE299340,monocyte/macrophage,Endothelial,176
+GSE299340,hepatocyte/tumor epithelial,Uncertain/Mixed,3114
+GSE299340,other/uncertain,NK_cell,245
+GSE299340,monocyte/macrophage,Uncertain/Mixed,4127
+GSE299340,monocyte/macrophage,NK_cell,487
+GSE299340,mast,Mast_cell,166
+GSE299340,hepatocyte/tumor epithelial,Monocyte/Macrophage,220
+GSE299340,hepatocyte/tumor epithelial,Hepatocyte/Epithelial,6312
+GSE299340,hepatocyte/tumor epithelial,Endothelial,82
+GSE299340,endothelial,Uncertain/Mixed,482
+GSE299340,hepatocyte/tumor epithelial,NK_cell,53
+GSE299340,hepatocyte/tumor epithelial,Mast_cell,9
+GSE299340,B,B_cell,870
+GSE299340,B,Endothelial,104
+GSE299340,B,NK_cell,169
+GSE299340,monocyte/macrophage,Fibroblast/Mesenchymal,25
+GSE299340,B,Mast_cell,3
+GSE299340,hepatocyte/tumor epithelial,Fibroblast/Mesenchymal,91
+GSE299340,plasma,Plasma_cell,2834
+GSE299340,hepatocyte/tumor epithelial,T_cell,396
+GSE299340,monocyte/macrophage,Neutrophil,248
+GSE299340,neutrophil,Mast_cell,1
+GSE299340,neutrophil,Endothelial,8
+GSE299340,other/uncertain,Neutrophil,78
+GSE299340,mast,NK_cell,3
+GSE299340,dendritic,Endothelial,36
+GSE299340,other/uncertain,Uncertain/Mixed,655
+GSE299340,endothelial,Fibroblast/Mesenchymal,2
+GSE299340,plasma,NK_cell,13
+GSE299340,B,T_cell,304
+GSE299340,neutrophil,Monocyte/Macrophage,56
+GSE299340,dendritic,Fibroblast/Mesenchymal,59
+GSE299340,other/uncertain,Monocyte/Macrophage,45
+GSE299340,dendritic,Uncertain/Mixed,188
+GSE299340,monocyte/macrophage,B_cell,36
+GSE299340,mast,Monocyte/Macrophage,1
+GSE299340,neutrophil,B_cell,25
+GSE299340,mast,Uncertain/Mixed,12
+GSE299340,other/uncertain,Mast_cell,4
+GSE299340,other/uncertain,Fibroblast/Mesenchymal,21
+GSE299340,dendritic,Monocyte/Macrophage,4
+GSE299340,other/uncertain,Plasma_cell,74
+GSE299340,mast,Endothelial,1
+GSE299340,T/NK,Monocyte/Macrophage,26
+GSE299340,other/uncertain,B_cell,37
+GSE299340,B,Fibroblast/Mesenchymal,11
+GSE299340,plasma,Uncertain/Mixed,106
+GSE299340,monocyte/macrophage,Hepatocyte/Epithelial,42
+GSE299340,monocyte/macrophage,Plasma_cell,66
+GSE299340,plasma,Monocyte/Macrophage,46
+GSE299340,B,Hepatocyte/Epithelial,8
+GSE299340,other/uncertain,Hepatocyte/Epithelial,13
+GSE299340,fibroblast/mesenchymal,Hepatocyte/Epithelial,1
+GSE299340,neutrophil,Hepatocyte/Epithelial,1
+GSE299340,plasma,Hepatocyte/Epithelial,20
+GSE299340,neutrophil,Plasma_cell,16
+GSE299340,B,Plasma_cell,9
+GSE299340,hepatocyte/tumor epithelial,Plasma_cell,8
+GSE299340,dendritic,Hepatocyte/Epithelial,1
+GSE299340,dendritic,T_cell,3
+GSE299340,plasma,T_cell,78
+GSE299340,hepatocyte/tumor epithelial,Neutrophil,5
+GSE299340,B,Neutrophil,5
+GSE299340,hepatocyte/tumor epithelial,B_cell,4
+GSE299340,T/NK,Fibroblast/Mesenchymal,5
+GSE299340,neutrophil,Fibroblast/Mesenchymal,1
+GSE299340,plasma,Fibroblast/Mesenchymal,9
+GSE299340,plasma,Endothelial,77
+GSE299340,plasma,B_cell,5
+GSE299340,T/NK,Endothelial,5
+GSE299340,endothelial,T_cell,1
+GSE299340,plasma,Neutrophil,1
+GSE299340,T/NK,Plasma_cell,1
+GSE299340,dendritic,Mast_cell,1
+GSE299340,mast,T_cell,2
+CRA002308,T/NK,NK_cell,41295
+CRA002308,dendritic,Uncertain/Mixed,477
+CRA002308,T/NK,T_cell,46276
+CRA002308,neutrophil,Neutrophil,2577
+CRA002308,B,Uncertain/Mixed,6953
+CRA002308,T/NK,Uncertain/Mixed,4959
+CRA002308,B,B_cell,6659
+CRA002308,hepatocyte/tumor epithelial,Hepatocyte/Epithelial,4994
+CRA002308,monocyte/macrophage,T_cell,1210
+CRA002308,monocyte/macrophage,NK_cell,724
+CRA002308,other/uncertain,T_cell,1396
+CRA002308,neutrophil,Uncertain/Mixed,3687
+CRA002308,monocyte/macrophage,Uncertain/Mixed,2192
+CRA002308,plasma,Plasma_cell,1357
+CRA002308,monocyte/macrophage,Monocyte/Macrophage,5471
+CRA002308,neutrophil,T_cell,1693
+CRA002308,neutrophil,NK_cell,471
+CRA002308,B,T_cell,657
+CRA002308,other/uncertain,Uncertain/Mixed,605
+CRA002308,monocyte/macrophage,B_cell,123
+CRA002308,other/uncertain,NK_cell,337
+CRA002308,plasma,NK_cell,24
+CRA002308,mast,Uncertain/Mixed,47
+CRA002308,B,Monocyte/Macrophage,1885
+CRA002308,plasma,T_cell,606
+CRA002308,monocyte/macrophage,Neutrophil,120
+CRA002308,endothelial,Endothelial,1346
+CRA002308,other/uncertain,B_cell,140
+CRA002308,mast,Mast_cell,336
+CRA002308,neutrophil,B_cell,190
+CRA002308,B,NK_cell,37
+CRA002308,plasma,B_cell,143
+CRA002308,other/uncertain,Neutrophil,90
+CRA002308,endothelial,Uncertain/Mixed,192
+CRA002308,T/NK,Monocyte/Macrophage,35
+CRA002308,other/uncertain,Plasma_cell,34
+CRA002308,neutrophil,Monocyte/Macrophage,128
+CRA002308,monocyte/macrophage,Plasma_cell,46
+CRA002308,T/NK,Hepatocyte/Epithelial,28
+CRA002308,T/NK,Endothelial,19
+CRA002308,neutrophil,Endothelial,28
+CRA002308,hepatocyte/tumor epithelial,T_cell,177
+CRA002308,other/uncertain,Mast_cell,2
+CRA002308,plasma,Uncertain/Mixed,202
+CRA002308,fibroblast/mesenchymal,Fibroblast/Mesenchymal,227
+CRA002308,fibroblast/mesenchymal,Hepatocyte/Epithelial,1
+CRA002308,monocyte/macrophage,Hepatocyte/Epithelial,110
+CRA002308,plasma,Neutrophil,5
+CRA002308,other/uncertain,Hepatocyte/Epithelial,88
+CRA002308,other/uncertain,Endothelial,62
+CRA002308,plasma,Endothelial,9
+CRA002308,dendritic,Monocyte/Macrophage,9
+CRA002308,hepatocyte/tumor epithelial,Uncertain/Mixed,166
+CRA002308,B,Plasma_cell,4
+CRA002308,monocyte/macrophage,Endothelial,52
+CRA002308,hepatocyte/tumor epithelial,Fibroblast/Mesenchymal,2
+CRA002308,B,Hepatocyte/Epithelial,10
+CRA002308,plasma,Hepatocyte/Epithelial,23
+CRA002308,other/uncertain,Monocyte/Macrophage,42
+CRA002308,dendritic,Hepatocyte/Epithelial,3
+CRA002308,neutrophil,Plasma_cell,19
+CRA002308,T/NK,Neutrophil,4
+CRA002308,B,Endothelial,38
+CRA002308,hepatocyte/tumor epithelial,Neutrophil,3
+CRA002308,dendritic,T_cell,7
+CRA002308,hepatocyte/tumor epithelial,NK_cell,5
+CRA002308,neutrophil,Mast_cell,3
+CRA002308,dendritic,Endothelial,8
+CRA002308,dendritic,B_cell,1
+CRA002308,T/NK,B_cell,5
+CRA002308,neutrophil,Fibroblast/Mesenchymal,3
+CRA002308,B,Neutrophil,5
+CRA002308,plasma,Monocyte/Macrophage,8
+CRA002308,endothelial,T_cell,2
+CRA002308,fibroblast/mesenchymal,Endothelial,1
+CRA002308,monocyte/macrophage,Mast_cell,2
+CRA002308,dendritic,NK_cell,3
+CRA002308,plasma,Fibroblast/Mesenchymal,2
+CRA002308,T/NK,Fibroblast/Mesenchymal,5
+CRA002308,monocyte/macrophage,Fibroblast/Mesenchymal,10
+CRA002308,dendritic,Fibroblast/Mesenchymal,32
+CRA002308,other/uncertain,Fibroblast/Mesenchymal,6
+CRA002308,B,Fibroblast/Mesenchymal,2
+CRA002308,hepatocyte/tumor epithelial,Endothelial,2
+CRA002308,mast,Monocyte/Macrophage,1
+CRA002308,endothelial,Fibroblast/Mesenchymal,1
+CRA002308,plasma,Mast_cell,1
+CRA002308,hepatocyte/tumor epithelial,B_cell,3
+CRA002308,hepatocyte/tumor epithelial,Plasma_cell,1
+CRA002308,neutrophil,Hepatocyte/Epithelial,1
+nature_xue,hepatocyte/tumor epithelial,Fibroblast/Mesenchymal,5029
+nature_xue,T/NK,T_cell,181428
+nature_xue,hepatocyte/tumor epithelial,T_cell,27422
+nature_xue,B,Uncertain/Mixed,21666
+nature_xue,T/NK,Monocyte/Macrophage,2
+nature_xue,fibroblast/mesenchymal,Fibroblast/Mesenchymal,22704
+nature_xue,monocyte/macrophage,Uncertain/Mixed,10588
+nature_xue,B,Monocyte/Macrophage,29329
+nature_xue,B,T_cell,4025
+nature_xue,hepatocyte/tumor epithelial,Hepatocyte/Epithelial,65208
+nature_xue,T/NK,Endothelial,8
+nature_xue,monocyte/macrophage,Monocyte/Macrophage,43385
+nature_xue,other/uncertain,T_cell,5719
+nature_xue,endothelial,Endothelial,50312
+nature_xue,T/NK,Uncertain/Mixed,6199
+nature_xue,T/NK,NK_cell,59482
+nature_xue,monocyte/macrophage,T_cell,7177
+nature_xue,monocyte/macrophage,Endothelial,4571
+nature_xue,hepatocyte/tumor epithelial,Uncertain/Mixed,21085
+nature_xue,hepatocyte/tumor epithelial,NK_cell,2624
+nature_xue,neutrophil,T_cell,4475
+nature_xue,hepatocyte/tumor epithelial,Endothelial,6054
+nature_xue,monocyte/macrophage,NK_cell,2009
+nature_xue,monocyte/macrophage,Hepatocyte/Epithelial,2328
+nature_xue,B,B_cell,12048
+nature_xue,plasma,Plasma_cell,7780
+nature_xue,B,NK_cell,399
+nature_xue,B,Hepatocyte/Epithelial,26
+nature_xue,neutrophil,Neutrophil,7270
+nature_xue,endothelial,Uncertain/Mixed,3194
+nature_xue,other/uncertain,Uncertain/Mixed,894
+nature_xue,other/uncertain,Fibroblast/Mesenchymal,264
+nature_xue,monocyte/macrophage,Neutrophil,1511
+nature_xue,neutrophil,Uncertain/Mixed,1622
+nature_xue,other/uncertain,NK_cell,714
+nature_xue,B,Endothelial,1022
+nature_xue,B,Fibroblast/Mesenchymal,21
+nature_xue,fibroblast/mesenchymal,T_cell,127
+nature_xue,fibroblast/mesenchymal,Uncertain/Mixed,482
+nature_xue,neutrophil,Endothelial,186
+nature_xue,hepatocyte/tumor epithelial,Monocyte/Macrophage,608
+nature_xue,T/NK,Hepatocyte/Epithelial,6
+nature_xue,mast,Mast_cell,1204
+nature_xue,dendritic,Fibroblast/Mesenchymal,1040
+nature_xue,other/uncertain,Endothelial,893
+nature_xue,hepatocyte/tumor epithelial,Plasma_cell,11
+nature_xue,other/uncertain,Neutrophil,306
+nature_xue,neutrophil,Plasma_cell,44
+nature_xue,dendritic,T_cell,73
+nature_xue,dendritic,Uncertain/Mixed,227
+nature_xue,neutrophil,NK_cell,878
+nature_xue,dendritic,Monocyte/Macrophage,59
+nature_xue,hepatocyte/tumor epithelial,B_cell,64
+nature_xue,other/uncertain,Plasma_cell,79
+nature_xue,hepatocyte/tumor epithelial,Neutrophil,81
+nature_xue,monocyte/macrophage,B_cell,225
+nature_xue,other/uncertain,Monocyte/Macrophage,55
+nature_xue,dendritic,Endothelial,146
+nature_xue,plasma,Endothelial,219
+nature_xue,neutrophil,B_cell,199
+nature_xue,plasma,T_cell,6375
+nature_xue,monocyte/macrophage,Fibroblast/Mesenchymal,315
+nature_xue,other/uncertain,B_cell,249
+nature_xue,fibroblast/mesenchymal,Endothelial,76
+nature_xue,plasma,Fibroblast/Mesenchymal,129
+nature_xue,plasma,NK_cell,277
+nature_xue,plasma,B_cell,336
+nature_xue,plasma,Uncertain/Mixed,628
+nature_xue,plasma,Hepatocyte/Epithelial,157
+nature_xue,monocyte/macrophage,Plasma_cell,116
+nature_xue,plasma,Monocyte/Macrophage,114
+nature_xue,fibroblast/mesenchymal,Hepatocyte/Epithelial,144
+nature_xue,mast,T_cell,19
+nature_xue,neutrophil,Fibroblast/Mesenchymal,61
+nature_xue,dendritic,NK_cell,32
+nature_xue,plasma,Neutrophil,34
+nature_xue,neutrophil,Monocyte/Macrophage,32
+nature_xue,endothelial,T_cell,10
+nature_xue,endothelial,Fibroblast/Mesenchymal,16
+nature_xue,T/NK,Neutrophil,2
+nature_xue,fibroblast/mesenchymal,Monocyte/Macrophage,2
+nature_xue,mast,Uncertain/Mixed,11
+nature_xue,neutrophil,Hepatocyte/Epithelial,563
+nature_xue,other/uncertain,Hepatocyte/Epithelial,230
+nature_xue,dendritic,Hepatocyte/Epithelial,46
+nature_xue,B,Neutrophil,24
+nature_xue,T/NK,Plasma_cell,1
+nature_xue,hepatocyte/tumor epithelial,Mast_cell,3
+nature_xue,mast,Hepatocyte/Epithelial,2
+nature_xue,dendritic,B_cell,10
+nature_xue,T/NK,Mast_cell,1
+nature_xue,monocyte/macrophage,Mast_cell,3
+nature_xue,other/uncertain,Mast_cell,4
+nature_xue,endothelial,NK_cell,2
+nature_xue,B,Mast_cell,4
+nature_xue,fibroblast/mesenchymal,NK_cell,4
+nature_xue,neutrophil,Mast_cell,2
+nature_xue,endothelial,Hepatocyte/Epithelial,1
+nature_xue,mast,Endothelial,6
+nature_xue,T/NK,Fibroblast/Mesenchymal,3
+nature_xue,mast,Fibroblast/Mesenchymal,2
+nature_xue,B,Plasma_cell,2
+nature_xue,dendritic,Mast_cell,1
+in_house,other/uncertain,T_cell,6032
+in_house,T/NK,T_cell,58696
+in_house,fibroblast/mesenchymal,Fibroblast/Mesenchymal,2455
+in_house,hepatocyte/tumor epithelial,Monocyte/Macrophage,89
+in_house,monocyte/macrophage,T_cell,2004
+in_house,hepatocyte/tumor epithelial,Endothelial,421
+in_house,hepatocyte/tumor epithelial,Uncertain/Mixed,2350
+in_house,other/uncertain,Uncertain/Mixed,2962
+in_house,hepatocyte/tumor epithelial,T_cell,294
+in_house,fibroblast/mesenchymal,T_cell,6
+in_house,B,NK_cell,202
+in_house,other/uncertain,Endothelial,733
+in_house,monocyte/macrophage,Monocyte/Macrophage,8228
+in_house,fibroblast/mesenchymal,Uncertain/Mixed,2359
+in_house,hepatocyte/tumor epithelial,Hepatocyte/Epithelial,7972
+in_house,dendritic,Uncertain/Mixed,607
+in_house,B,T_cell,1555
+in_house,hepatocyte/tumor epithelial,Fibroblast/Mesenchymal,70
+in_house,endothelial,Endothelial,8790
+in_house,B,Monocyte/Macrophage,2919
+in_house,plasma,T_cell,2712
+in_house,fibroblast/mesenchymal,Endothelial,50
+in_house,B,B_cell,3929
+in_house,monocyte/macrophage,Uncertain/Mixed,5192
+in_house,B,Endothelial,883
+in_house,mast,Mast_cell,538
+in_house,hepatocyte/tumor epithelial,B_cell,2
+in_house,monocyte/macrophage,Neutrophil,4459
+in_house,other/uncertain,Monocyte/Macrophage,547
+in_house,hepatocyte/tumor epithelial,NK_cell,178
+in_house,dendritic,Endothelial,174
+in_house,T/NK,NK_cell,21983
+in_house,neutrophil,Neutrophil,14068
+in_house,T/NK,Uncertain/Mixed,24351
+in_house,neutrophil,Monocyte/Macrophage,606
+in_house,plasma,Plasma_cell,3573
+in_house,monocyte/macrophage,NK_cell,883
+in_house,hepatocyte/tumor epithelial,Plasma_cell,4
+in_house,B,Uncertain/Mixed,2718
+in_house,other/uncertain,Fibroblast/Mesenchymal,60
+in_house,plasma,Uncertain/Mixed,1035
+in_house,B,Fibroblast/Mesenchymal,17
+in_house,dendritic,Monocyte/Macrophage,40
+in_house,dendritic,Fibroblast/Mesenchymal,34
+in_house,endothelial,Uncertain/Mixed,996
+in_house,monocyte/macrophage,Plasma_cell,83
+in_house,neutrophil,Fibroblast/Mesenchymal,28
+in_house,T/NK,Mast_cell,382
+in_house,monocyte/macrophage,Endothelial,794
+in_house,dendritic,NK_cell,14
+in_house,other/uncertain,NK_cell,561
+in_house,neutrophil,T_cell,2516
+in_house,mast,Uncertain/Mixed,38
+in_house,plasma,B_cell,71
+in_house,neutrophil,Endothelial,98
+in_house,B,Mast_cell,35
+in_house,other/uncertain,Mast_cell,47
+in_house,monocyte/macrophage,B_cell,84
+in_house,T/NK,B_cell,6
+in_house,neutrophil,Uncertain/Mixed,2972
+in_house,other/uncertain,B_cell,95
+in_house,T/NK,Endothelial,66
+in_house,monocyte/macrophage,Mast_cell,53
+in_house,plasma,Endothelial,187
+in_house,neutrophil,B_cell,119
+in_house,monocyte/macrophage,Fibroblast/Mesenchymal,59
+in_house,T/NK,Monocyte/Macrophage,42
+in_house,neutrophil,NK_cell,388
+in_house,hepatocyte/tumor epithelial,Mast_cell,2
+in_house,B,Plasma_cell,1
+in_house,plasma,Monocyte/Macrophage,370
+in_house,plasma,Neutrophil,397
+in_house,other/uncertain,Neutrophil,927
+in_house,plasma,Hepatocyte/Epithelial,93
+in_house,neutrophil,Plasma_cell,73
+in_house,B,Neutrophil,18
+in_house,monocyte/macrophage,Hepatocyte/Epithelial,311
+in_house,plasma,NK_cell,201
+in_house,other/uncertain,Hepatocyte/Epithelial,88
+in_house,other/uncertain,Plasma_cell,64
+in_house,neutrophil,Hepatocyte/Epithelial,22
+in_house,plasma,Mast_cell,20
+in_house,mast,T_cell,20
+in_house,mast,Endothelial,2
+in_house,endothelial,Monocyte/Macrophage,2
+in_house,plasma,Fibroblast/Mesenchymal,11
+in_house,mast,Hepatocyte/Epithelial,2
+in_house,T/NK,Hepatocyte/Epithelial,34
+in_house,T/NK,Plasma_cell,3
+in_house,neutrophil,Mast_cell,14
+in_house,B,Hepatocyte/Epithelial,24
+in_house,T/NK,Fibroblast/Mesenchymal,4
+in_house,dendritic,T_cell,12
+in_house,endothelial,Fibroblast/Mesenchymal,3
+in_house,endothelial,T_cell,8
+in_house,mast,Monocyte/Macrophage,12
+in_house,T/NK,Neutrophil,15
+in_house,dendritic,Hepatocyte/Epithelial,6
+in_house,hepatocyte/tumor epithelial,Neutrophil,26
+in_house,fibroblast/mesenchymal,Monocyte/Macrophage,1
+in_house,mast,Neutrophil,1
+in_house,mast,NK_cell,2
+in_house,endothelial,NK_cell,1
+in_house,dendritic,B_cell,2
+in_house,dendritic,Mast_cell,2
+in_house,fibroblast/mesenchymal,Hepatocyte/Epithelial,1
