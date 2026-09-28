@@ -71,11 +71,14 @@ new_chunked <- function(chunks,features,cells) structure(
 if(!file.exists(source_qs)) stop("Source QS not found: ",source_qs)
 message("Reading ",source_qs)
 obj <- qs::qread(source_qs,use_alt_rep=FALSE,nthreads=8L)
-if(!inherits(obj,"Seurat")||!"RNA"%in%Assays(obj)) stop("Invalid Seurat object")
-if(!identical(Layers(obj[["RNA"]]),"counts")) stop("Expected one RNA counts layer")
+if(!inherits(obj,"Seurat")) stop("Invalid Seurat object")
+assay_names <- SeuratObject::Assays(obj)
+if(!("RNA"%in%assay_names)) stop("Seurat object lacks the RNA assay")
+if(!identical(SeuratObject::Layers(obj[["RNA"]]),"counts"))
+  stop("Expected one RNA counts layer")
 counts_layer <- obj[["RNA"]]@layers[["counts"]]
 if(!inherits(counts_layer,"task004b_chunked_counts")) stop("Expected task004b_chunked_counts")
-md <- obj[[]]
+md <- as.data.frame(obj[[]])
 if(ncol(obj)!=1490852L) stop("Preflight cell count mismatch: ",ncol(obj))
 if(nrow(obj)!=38025L) stop("Preflight feature count mismatch: ",nrow(obj))
 if(uniqueN(md$dataset)!=8L) stop("Preflight dataset count mismatch")
