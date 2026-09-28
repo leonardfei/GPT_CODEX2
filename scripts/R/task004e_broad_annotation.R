@@ -259,11 +259,19 @@ run_dataset <- function(dataset_name,is_reference=FALSE,reference_matrix=NULL,re
     sketch_global_idx <- match(sketch_cells,colnames(obj))
     if(anyNA(sketch_global_idx)||anyDuplicated(sketch_global_idx))
       stop("Leverage-score sketch cell IDs did not map uniquely to the source object for ",dataset_name)
+    x_sketch <- LayerData(sk[["task004d_sketch"]],layer="counts")
+    sketch_assay_cells <- colnames(x_sketch)
+    sketch_order <- match(sketch_cells,sketch_assay_cells)
+    metadata_order <- match(sketch_cells,rownames(md))
+    if(anyNA(sketch_order)||anyNA(metadata_order))
+      stop("Sketch counts or source metadata do not contain all sampled cell IDs for ",dataset_name)
+    x_sketch <- x_sketch[,sketch_order,drop=FALSE]
+    meta_sketch <- md[metadata_order,,drop=FALSE]
+    rownames(meta_sketch) <- sketch_cells
     rm(sk,x); gc(verbose=FALSE)
-    x_sketch <- counts_layer[shared_genes,sketch_global_idx,drop=FALSE]
     sk <- CreateSeuratObject(counts=x_sketch,assay="RNA",project=dataset_name,
-                             meta.data=md[sketch_global_idx,,drop=FALSE])
-    rm(x_sketch); gc(verbose=FALSE)
+                             meta.data=meta_sketch)
+    rm(x_sketch,meta_sketch); gc(verbose=FALSE)
     sk <- NormalizeData(sk,normalization.method="LogNormalize",scale.factor=10000,verbose=FALSE)
     VariableFeatures(sk) <- hvg
   } else {
